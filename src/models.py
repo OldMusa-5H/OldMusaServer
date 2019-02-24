@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 # Here's the sql representation of the data we need to store
 # don't put any logic in this file, it should only contain sql definitions
+# If you don't understand any of this go read the sqlalchemy documentation
 
 db = SQLAlchemy()
 

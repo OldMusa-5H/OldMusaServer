@@ -10,6 +10,9 @@ from werkzeug.exceptions import BadRequest, NotFound
 
 from models import Museum, Map, Room, Sensor, db
 
+
+# This is the rest controller, it controls every query/update done trough rest (everything in the /api/* site section)
+
 # sqlalchemy session used to make query and updates
 session = db.session  # type: Session
 
@@ -22,6 +25,12 @@ api.prefix = "/api"
 
 
 # ---------------- Utility methods ----------------
+# Utility methods used to automate the creation and query of resources
+# Every GET, POST and PUT can use an utility method that discovers which
+# field to use/update, also checking foreign key constraints (that some databases
+# could not check).
+# These methods already handle cases such as resource not found and missing field
+# and handle them accordingly (ex: source not found -> throw 404)
 
 
 # Get method that throws 404 when
@@ -30,13 +39,30 @@ T = TypeVar('T')
 
 
 def rest_get(clazz: Type[T], res_id: int) -> T:
+    """
+    Gets the resource using its id, throws 404 if it does not exist.
+
+    :param clazz: The resource model definition
+    :param res_id: the resource id
+    :return: The resource found
+    """
     museum = session.query(clazz).filter(clazz.id == res_id).first()
     if museum is None:
         raise BadRequest('Cannot find ' + clazz.name + str(res_id))
     return museum
 
 
-def rest_create(clazz, args):
+def rest_create(clazz: Type[T], args: dict) -> T:
+    """
+    Creates a resource using it's model definition and the arguments expressed as field: value.
+    The arguments must already be filtered using something as a RequestParser to limit external attacks.
+    This method should manually check foreign keys, throwing the appropriate error if a constraint is violated.
+
+    :param clazz: The resource model definition
+    :param args: Arguments used to initialize the resource fields
+    :return: The resource just created
+    """
+
     # Manually check foreign keys
     for (key, val) in args.items():
         if val is None:
@@ -55,7 +81,18 @@ def rest_create(clazz, args):
     return obj
 
 
-def rest_update(id, parser: RequestParser, res_class):
+def rest_update(res_id, parser: RequestParser, res_class) -> dict:
+    """
+    Updates a resource using it's model definition and the arguments expressed as field: value.
+    The arguments must already be filtered using something as a RequestParser to limit external attacks
+    (ex: no-one should be able to change the resource id).
+    This method should manually check foreign keys, throwing the appropriate error if a constraint is violated.
+
+    :param res_id: Id of the resource to update
+    :param parser: Parser used to parse the request arguments
+    :param res_class: Model definition of the resouce to update
+    :return: A dict representing the updated object
+    """
     args = parser.parse_args(strict=True)
 
     update = {}
@@ -77,18 +114,23 @@ def rest_update(id, parser: RequestParser, res_class):
         raise BadRequest('No data in update (did you forget to send a json?)')
 
     res = session.query(res_class) \
-        .filter(res_class.id == id) \
+        .filter(res_class.id == res_id) \
         .update(update)
 
     if res == 0:
-        raise NotFound("Cannot find {} with id {}".format(res_class.__tablename__, id))
+        raise NotFound("Cannot find {} with id {}".format(res_class.__tablename__, res_id))
 
     session.commit()
 
-    return rest_get(res_class, id).to_dict()
+    return rest_get(res_class, res_id).to_dict()
 
 
 # ---------------- Parsers initialization ----------------
+# Parser are used to filter parameters passed to the rest links
+# A request is valid only if every argument passed exists in the parser
+# and if it's type corresponds to the one specified in the parser.
+# When no type is specified the argument's type is a string (anything).
+# If a request doesn't respect the parser validation it is discarded (throws a 4XX http error)
 
 # General parser that parses only the id
 id_parser = RequestParser()
@@ -96,7 +138,7 @@ id_parser.add_argument("id", type=int)
 
 # Museum
 museum_parser = RequestParser()
-museum_parser.add_argument("name")
+museum_parser.add_argument("name", type=str)
 
 # Sensor
 sensor_parser = RequestParser()
@@ -118,6 +160,12 @@ room_parser.add_argument("name", type=str)
 
 
 # ---------------- Resource definitions ----------------
+# REST resource definition
+# They control the access to the REST API, defining the logic that sits behind the site API entry-point
+# Every call should check for: authorization, database stability, parameter validity, resource existence...
+# throwing the appropriate error every time one of those layers is broken.
+# Be aware that this is the public API that every frontend will use,
+# try to restrict access and prevent bugs that might lead to attacks by hackers
 
 @api.resource("/museum")
 class RMuseumList(Resource):
