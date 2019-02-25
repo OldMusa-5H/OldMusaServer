@@ -33,3 +33,7 @@ def setup_db():
 @app.route("/")
 def index():
     return "This is the oldmusa website! we still don't have a WEB Interface ¯\\_(ツ)_/¯"
+
+if __name__ == '__main__':
+    setup_db()
+    app.run()
