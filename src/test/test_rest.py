@@ -41,7 +41,7 @@ class FlaskrTestCase(unittest.TestCase):
         if data is None or data is "":
             return data
 
-        return json.loads(data)
+        return json.loads(data.decode())
 
     def test_generic(self):
         mid = self.open("POST", "museum")["id"]
@@ -66,14 +66,14 @@ class FlaskrTestCase(unittest.TestCase):
         # Let's test some errors
         response = self.open("PUT", "sensor/%i" % sensor_id, raw_response=True)
         self.assertEqual(400, response.status_code)
-        self.assertIn("No data in update", json.loads(response.data)["message"])
+        self.assertIn("No data in update", json.loads(response.data.decode())["message"])
 
         # Check the foreign keys
         response = self.open("PUT", "sensor/%i" % sensor_id, raw_response=True, content={
             "loc_map": "10000"
         })
         self.assertEqual(404, response.status_code)
-        self.assertIn("map not found", json.loads(response.data)["message"])
+        self.assertIn("map not found", json.loads(response.data.decode())["message"])
 
         # Add map
         map_id = self.open("POST", "museum/%i/map" % mid)["id"]
