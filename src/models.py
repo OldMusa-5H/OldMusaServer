@@ -51,7 +51,6 @@ class Room(db.Model):
             "id": self.id,
             "museum_id": self.museum_id,
             "name": self.name,
-            "sensors": self.sensors,
         }
 
 
@@ -78,8 +77,8 @@ class Sensor(db.Model):
             "museum_id": self.museum_id,
             "name": self.name,
             "room": self.room,
-            "range_min": str(self.range_min),
-            "range_max": str(self.range_max),
+            "range_min": self.range_min,
+            "range_max": self.range_max,
             "loc_map": self.loc_map,
             "loc_x": self.loc_x,
             "loc_y": self.loc_y,

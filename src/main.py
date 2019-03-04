@@ -36,4 +36,4 @@ def index():
 
 if __name__ == '__main__':
     setup_db()
-    app.run()
+    app.run(host="0.0.0.0", port=8080)

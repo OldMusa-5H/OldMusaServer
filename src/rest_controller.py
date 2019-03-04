@@ -125,6 +125,10 @@ def rest_update(res_id, parser: RequestParser, res_class) -> dict:
     return rest_get(res_class, res_id).to_dict()
 
 
+def clean_dict(d: dict):
+    return {key: val for (key, val) in d.items() if val is not None}
+
+
 # ---------------- Parsers initialization ----------------
 # Parser are used to filter parameters passed to the rest links
 # A request is valid only if every argument passed exists in the parser
@@ -170,12 +174,12 @@ room_parser.add_argument("name", type=str)
 @api.resource("/museum")
 class RMuseumList(Resource):
     def get(self):
-        return [x.to_dict() for x in db.session.query(Museum).all()]
+        return [x.id for x in db.session.query(Museum).all()]
 
     def post(self):
         args = museum_parser.parse_args(strict=True)
         museum = rest_create(Museum, args)
-        return museum.to_dict(), 201
+        return clean_dict(museum.to_dict()), 201
 
     def delete(self):
         args = id_parser.parse_args(strict=True)
@@ -187,7 +191,7 @@ class RMuseumList(Resource):
 @api.resource("/museum/<mid>")
 class RMuseum(Resource):
     def get(self, mid):
-        return rest_get(Museum, mid).to_dict()
+        return clean_dict(rest_get(Museum, mid).to_dict())
 
     def put(self, mid):
         return rest_update(mid, museum_parser, Museum)
@@ -211,7 +215,7 @@ class RMuseumSensors(Resource):
 
     def post(self, mid):
         sensor = RSensor.create_from_req(mid)
-        return sensor.to_dict(), 201
+        return clean_dict(sensor.to_dict()), 201
 
 
 @api.resource("/museum/<mid>/map")
@@ -227,7 +231,7 @@ class RMuseumMaps(Resource):
         map = Map(museum_id=mid)
         session.add(map)
         session.commit()
-        return map.to_dict(), 201
+        return clean_dict(map.to_dict()), 201
 
 
 @api.resource("/museum/<mid>/room")
@@ -242,13 +246,13 @@ class RMuseumRooms(Resource):
     def post(self, mid):
         args = room_parser.parse_args(strict=True)
         args["museum_id"] = mid
-        return rest_create(Room, args).to_dict(), 201
+        return clean_dict(rest_create(Room, args).to_dict()), 201
 
 
 @api.resource("/sensor/<sid>")
 class RSensor(Resource):
     def get(self, sid):
-        return rest_get(Sensor, sid).to_dict()
+        return clean_dict(rest_get(Sensor, sid).to_dict())
 
     def put(self, sid):
         return rest_update(sid, sensor_parser, Sensor)
@@ -269,6 +273,9 @@ class RSensor(Resource):
 
 @api.resource("/map/<mid>")
 class RMap(Resource):
+    def get(self, mid):
+        return clean_dict(rest_get(Map, mid).to_dict())
+
     def delete(self, mid):
         deleted = session.query(Map).filter(Map.id == mid).delete()
         if deleted == 0:
@@ -313,13 +320,14 @@ class RMapSensors(Resource):
 @api.resource("/room/<rid>")
 class RRoom(Resource):
     def get(self, rid):
-        return rest_get(Room, rid).to_dict()
+        return clean_dict(rest_get(Room, rid).to_dict())
 
     def put(self, rid):
         return rest_update(rid, room_parser, Room)
 
     def delete(self, rid):
         session.delete(rest_get(Room, rid))
+        session.commit()
         return None, 202
 
     @staticmethod
