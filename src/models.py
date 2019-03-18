@@ -37,9 +37,8 @@ class Map(db.Model):
         return {
             "id": self.id,
             "museum_id": self.museum_id,
-            "nPiano": self.nPiano,
+            "n_piano": self.nPiano,
         }
-
 
 
 class Sensor(db.Model):
@@ -73,6 +72,7 @@ class Sensor(db.Model):
             "enabled": self.enabled,
             "status": self.status,
         }
+
 
 class Channel(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
