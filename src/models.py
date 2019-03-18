@@ -11,21 +11,23 @@ db = SQLAlchemy()
 class Museum(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String)
+    id_cnr = db.Column(db.String)
 
     maps = db.relationship("Map")
-    rooms = db.relationship("Room")
     sensors = db.relationship("Sensor")
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
+            "id_cnr": self.id_cnr,
         }
 
 
 class Map(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
+    nPiano = db.Column(db.Integer)
 
     image = db.Column(db.LargeBinary)
 
@@ -35,34 +37,17 @@ class Map(db.Model):
         return {
             "id": self.id,
             "museum_id": self.museum_id,
+            "nPiano": self.nPiano,
         }
 
-
-class Room(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
-
-    name = db.Column(db.String)
-
-    sensors = db.relationship("Sensor")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "museum_id": self.museum_id,
-            "name": self.name,
-        }
 
 
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
+    id_cnr = db.Column(db.String)
 
     name = db.Column(db.String)
-    room = db.Column(db.Integer, db.ForeignKey(Room.id))
-
-    range_min = db.Column(db.Numeric)
-    range_max = db.Column(db.Numeric)
 
     loc_map = db.Column(db.Integer, db.ForeignKey(Map.id))
     loc_x = db.Column(db.Integer)
@@ -71,10 +56,13 @@ class Sensor(db.Model):
     enabled = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String, nullable=False, default="ok")
 
+    channels = db.relationship("Channel")
+
     def to_dict(self):
         return {
             "id": self.id,
             "museum_id": self.museum_id,
+            "id_cnr": self.id_cnr,
             "name": self.name,
             "room": self.room,
             "range_min": self.range_min,
@@ -85,3 +73,26 @@ class Sensor(db.Model):
             "enabled": self.enabled,
             "status": self.status,
         }
+
+class Channel(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sensor_id = db.Column(db.Integer, db.ForeignKey(Sensor.id), nullable=False)
+    id_cnr = db.Column(db.String)
+
+    name = db.Column(db.String)
+
+    measure_unit = db.Column(db.String)
+    range_min = db.Column(db.Numeric)
+    range_max = db.Column(db.Numeric)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "museum_id": self.museum_id,
+            "id_cnr": self.id_cnr,
+            "name": self.name,
+            "measure_unit": self.measure_unit,
+            "range_min": self.range_min,
+            "range_max": self.range_max,
+        }
+
