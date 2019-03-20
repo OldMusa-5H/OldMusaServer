@@ -8,7 +8,7 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound
 
-from models import Museum, Map, Room, Sensor, db
+from models import Museum, Map, Channel, Sensor, db
 
 
 # This is the rest controller, it controls every query/update done trough rest (everything in the /api/* site section)
@@ -143,24 +143,31 @@ id_parser.add_argument("id", type=int)
 # Museum
 museum_parser = RequestParser()
 museum_parser.add_argument("name", type=str)
+museum_parser.add_argument("id_cnr", type=str)
 
 # Sensor
 sensor_parser = RequestParser()
+sensor_parser.add_argument("id_cnr", type=str)
 sensor_parser.add_argument("name", type=str)
-sensor_parser.add_argument("room", type=str)
-
-sensor_parser.add_argument("range_min", type=int)
-sensor_parser.add_argument("range_max", type=int)
 
 sensor_parser.add_argument("loc_map", type=str)
 sensor_parser.add_argument("loc_x", type=int)
 sensor_parser.add_argument("loc_y", type=int)
 
 sensor_parser.add_argument("enabled", type=bool)
+#status?
 
-# Room
-room_parser = RequestParser()
-room_parser.add_argument("name", type=str)
+# Channel
+channel_parser = RequestParser()
+channel_parser.add_argument("sensor_id", type=int)
+channel_parser.add_argument("museum_id", type=int)
+channel_parser.add_argument("id_cnr", type=str)
+
+channel_parser.add_argument("name", type=str)
+
+channel_parser.add_argument("measure_unit", type=str)
+channel_parser.add_argument("range_min", type=int)
+channel_parser.add_argument("range_max", type=int)
 
 
 # ---------------- Resource definitions ----------------
@@ -234,19 +241,19 @@ class RMuseumMaps(Resource):
         return clean_dict(map.to_dict()), 201
 
 
-@api.resource("/museum/<mid>/room")
-class RMuseumRooms(Resource):
-    def get(self, mid):
-        ids = session.query(Room)\
-                     .filter(Room.museum_id == mid)\
-                     .with_entities(Room.id)\
+@api.resource("/museum/<mid>/sensor/<sid>/channel")
+class RMuseumChannels(Resource):
+    def get(self, sid):
+        ids = session.query(Channel)\
+                     .filter(Channel.sensor_id == sid)\
+                     .with_entities(Channel.id)\
                      .all()
         return [x[0] for x in ids]
 
-    def post(self, mid):
-        args = room_parser.parse_args(strict=True)
-        args["museum_id"] = mid
-        return clean_dict(rest_create(Room, args).to_dict()), 201
+    def post(self, sid):
+        args = channel_parser.parse_args(strict=True)
+        args["sensor_id"] = sid
+        return clean_dict(rest_create(Channel, args).to_dict()), 201
 
 
 @api.resource("/sensor/<sid>")
@@ -317,22 +324,27 @@ class RMapSensors(Resource):
         return [x.id for x in rest_get(Map, mid).sensors]
 
 
-@api.resource("/room/<rid>")
-class RRoom(Resource):
-    def get(self, rid):
-        return clean_dict(rest_get(Room, rid).to_dict())
+@api.resource("/channel/<cid>")
+class RChannel(Resource):
+    def get(self, cid):
+        return clean_dict(rest_get(Channel, cid).to_dict())
 
-    def put(self, rid):
-        return rest_update(rid, room_parser, Room)
+    def put(self, cid):
+        return rest_update(cid, channel_parser, Channel)
 
-    def delete(self, rid):
-        session.delete(rest_get(Room, rid))
+    def delete(self, cid):
+        session.delete(rest_get(Channel, cid))
         session.commit()
         return None, 202
 
     @staticmethod
-    def create_from_req(self, museum_id, req=None):
-        args = room_parser.parse_args(strict=True, req=req)
-        args["museum_id"] = museum_id
-        return rest_create(Room, args)
+    def create_from_req(self, sensor_id, req=None):
+        args = channel_parser.parse_args(strict=True, req=req)
+        args["sensor_id"] = sensor_id
+        return rest_create(Channel, args)
 
+@api.resource("/sensors/<sid>/channels")
+class RSensorChannels(Resource):
+    def get(self, sid):
+        # TODO: get only ids
+        return [x.id for x in rest_get(Sensor, sid).channels]

@@ -15,6 +15,7 @@ class Museum(db.Model):
 
     maps = db.relationship("Map")
     sensors = db.relationship("Sensor")
+    channels = db.relationship("Channel")
 
     def to_dict(self):
         return {
@@ -77,6 +78,7 @@ class Sensor(db.Model):
 class Channel(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sensor_id = db.Column(db.Integer, db.ForeignKey(Sensor.id), nullable=False)
+    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
     id_cnr = db.Column(db.String)
 
     name = db.Column(db.String)
@@ -88,6 +90,7 @@ class Channel(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "sensor_id": self.sensor_id,
             "museum_id": self.museum_id,
             "id_cnr": self.id_cnr,
             "name": self.name,
