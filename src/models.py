@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from passlib.apps import custom_app_context as pwd_context
 
 
 # Here's the sql representation of the data we need to store
@@ -7,6 +8,31 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.mysql import DOUBLE
 
 db = SQLAlchemy()
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(16), index=True)
+    password_hash = db.Column(db.String(128))
+
+    # A: Admin
+    # U: User (no permission)
+    permission = db.Column(db.String(1), default="U")
+
+    sites = db.relationship("Museum", secondary="user_access")
+
+    def hash_password(self, password):
+        self.password_hash = pwd_context.hash(password)
+
+    def verify_password(self, password) -> bool:
+        return pwd_context.verify(password, self.password_hash)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "permission": self.permission,
+        }
 
 
 class Museum(db.Model):
@@ -23,6 +49,17 @@ class Museum(db.Model):
             "id": self.id,
             "name": self.name,
             "id_cnr": self.id_cnr,
+        }
+
+
+class UserAccess(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id), primary_key=True, index=True)
+    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), primary_key=True)
+
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "museum_id": self.museum_id,
         }
 
 

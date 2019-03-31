@@ -1,14 +1,13 @@
+import json
 import logging
-import os
 import sys
 from pathlib import Path
 
 from flask import Flask
+from sqlalchemy.orm import Session
 
-from models import db
+from models import db, User
 from rest_controller import api
-import json
-
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 config_path = None
@@ -52,6 +51,15 @@ def setup_db():
     # Create all tables
     db.create_all(bind=None)
 
+    # Root psw?
+    root_psw = config["root_password"]
+    if root_psw is not None:
+        session = db.session  # type: Session
+        user = User(username="root", permission="A")
+        user.hash_password(root_psw)
+        session.add(user)
+        session.commit()
+
     # Init rest declarations
     api.app = app
     api.init_app(app)
@@ -65,4 +73,4 @@ def index():
 
 if __name__ == '__main__':
     setup_db()
-    app.run(host=config["listen_addr"], port=config["listen_port"])
+    app.run(host="0.0.0.0", port=8080)
