@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 # Here's the sql representation of the data we need to store
 # don't put any logic in this file, it should only contain sql definitions
 # If you don't understand any of this go read the sqlalchemy documentation
+from sqlalchemy.dialects.mysql import DOUBLE
 
 db = SQLAlchemy()
 
@@ -99,3 +100,33 @@ class Channel(db.Model):
             "range_max": self.range_max,
         }
 
+
+# CNR readings table
+# It stores all the channel readings
+# It's in a different database (hence the bind_key)
+class ReadingData(db.Model):
+    __bind_key__ = 'cnr'
+    __tablename__ = 't_rilevamento_dati'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('data', 'idsito', 'idstanza', 'idstazione', 'idsensore', 'canale', 'misura'),
+        db.Index('ind_t_rilevamento_centrali', 'idsito', 'idstanza', 'idstazione', 'idsensore', 'data', 'misura'),
+        db.Index('index_sito_sta_ch', 'idsito', 'idstazione', 'canale'),
+        {
+            'mysql_engine': 'MYISAM',
+            'mysql_charset': 'latin1'
+        }
+    )
+
+    site_id = db.Column("idsito", db.String(50), nullable=False, default="")
+    room_id = db.Column("idstanza", db.String(50), nullable=False, default="")
+    station_id = db.Column("idstazione", db.String(50), nullable=False, default="")
+    sensor_id = db.Column("idsensore", db.String(50), nullable=False, default="")
+    channel_id = db.Column("canale", db.String(50), nullable=False, default="")
+    value_min = db.Column("valore_min", DOUBLE, nullable=False, default=0)
+    value_avg = db.Column("valore_med", DOUBLE)
+    value_max = db.Column("valore_max", DOUBLE)
+    deviation = db.Column("scarto", DOUBLE)
+    date = db.Column("data", db.DateTime, nullable=False)
+    error = db.Column("errore", db.String(1))
+    measure_unit = db.Column("misura", db.String(50), nullable=False, default="")
+    step = db.Column("step", db.Float)

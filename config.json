@@ -1,0 +1,14 @@
+{
+  "config_db": "sqlite:///:memory:",
+  "cnr_db": "sqlite:///:memory:",
+
+  "sql_log": {
+    "enabled": true,
+    "output": "db.log"
+  },
+
+  "root_password": "password",
+
+  "listen_addr": "0.0.0.0",
+  "listen_port": 8080
+}
