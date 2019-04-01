@@ -261,12 +261,9 @@ sensor_parser.add_argument("loc_x", type=int)
 sensor_parser.add_argument("loc_y", type=int)
 
 sensor_parser.add_argument("enabled", type=bool)
-#status?
 
 # Channel
 channel_parser = RequestParser()
-channel_parser.add_argument("sensor_id", type=int)
-channel_parser.add_argument("museum_id", type=int)
 channel_parser.add_argument("id_cnr", type=str)
 
 channel_parser.add_argument("name", type=str)
@@ -476,7 +473,7 @@ class RMuseumMaps(Resource):
         return clean_dict(map.to_dict()), 201
 
 
-@api.resource("/museum/<mid>/sensor/<sid>/channel")
+@api.resource("/sensor/<sid>/channel")
 class RMuseumChannels(Resource):
     @login_required
     def get(self, sid):
@@ -486,10 +483,13 @@ class RMuseumChannels(Resource):
                      .all()
         return [x[0] for x in ids]
 
+    @admin_required
     def post(self, sid):
         args = channel_parser.parse_args(strict=True)
         args["sensor_id"] = sid
         return clean_dict(rest_create(Channel, args).to_dict()), 201
+
+
 
 
 @api.resource("/sensor/<sid>")
@@ -579,7 +579,7 @@ class RChannel(Resource):
 
     @admin_required
     def put(self, cid):
-        return rest_update(cid, channel_parser.parse_args(strict=True), Channel)
+        return clean_dict(rest_update(cid, channel_parser.parse_args(strict=True), Channel).to_dict())
 
     @admin_required
     def delete(self, cid):
@@ -594,9 +594,14 @@ class RChannel(Resource):
         return rest_create(Channel, args)
 
 
-@api.resource("/sensors/<sid>/channels")
+@api.resource("/sensor/<sid>/channels")
 class RSensorChannels(Resource):
     @login_required
     def get(self, sid):
         # TODO: get only ids
         return [x.id for x in rest_get(Sensor, sid).channels]
+
+
+@api.resource("/channel/<cid>/readings")
+class RChannelReadings(Resource):
+    pass

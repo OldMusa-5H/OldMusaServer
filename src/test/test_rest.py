@@ -107,6 +107,24 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(b"png image data", response.data)
 
+        # Add Channel
+        response = self.open("POST", "sensor/%i/channel" % sensor_id, content={ "name": "testchannel" })
+        ch_id = response["id"]
+        self.assertEqual("testchannel", response["name"])
+        self.assertEqual(sensor_id, response["sensor_id"])
+
+        response = self.open("PUT", "channel/%i" % ch_id, content={
+            "name": "pioppo",
+            "measure_unit": "nonno"
+        })
+
+        self.assertEqual("pioppo", response["name"])
+        self.assertEqual("nonno", response["measure_unit"])
+
+        response = self.open("GET", "sensor/%i/channel" % sensor_id)
+        self.assertEqual(len(response), 1)
+
+
     def test_permission_view(self):
         self.login_root()
 
