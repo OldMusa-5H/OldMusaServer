@@ -62,19 +62,19 @@ class FlaskrTestCase(unittest.TestCase):
     def test_generic(self):
         self.login_root()
 
-        mid = self.open("POST", "museum")["id"]
+        mid = self.open("POST", "site")["id"]
 
-        response = self.open("PUT", "museum/%i" % mid, content={"name": "testmuse"})
+        response = self.open("PUT", "site/%i" % mid, content={"name": "testmuse"})
         self.assertEqual(response["id"], mid)
         self.assertEqual(response["name"], "testmuse")
 
         # Add sensor
-        response = self.open("POST", "museum/%i/sensor" % mid, content={
+        response = self.open("POST", "site/%i/sensor" % mid, content={
             "name": "testsensor",
         })
 
         sensor_id = response["id"]
-        self.assertEqual(mid, response["museum_id"])
+        self.assertEqual(mid, response["site_id"])
 
         # Let's test some errors
         response = self.open("PUT", "sensor/%i" % sensor_id, raw_response=True)
@@ -89,7 +89,7 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertIn("Cannot find map", json.loads(response.data.decode())["message"])
 
         # Add map
-        map_id = self.open("POST", "museum/%i/map" % mid)["id"]
+        map_id = self.open("POST", "site/%i/map" % mid)["id"]
         response = self.open("PUT", "sensor/%i" % sensor_id, content={
             "loc_map": map_id,
             "loc_x": 1234,
@@ -128,23 +128,23 @@ class FlaskrTestCase(unittest.TestCase):
     def test_permission_view(self):
         self.login_root()
 
-        mus1 = self.open("POST", "museum")["id"]
-        mus2 = self.open("POST", "museum")["id"]
-        mus3 = self.open("POST", "museum")["id"]
+        mus1 = self.open("POST", "site")["id"]
+        mus2 = self.open("POST", "site")["id"]
+        mus3 = self.open("POST", "site")["id"]
 
         uid = self.open("POST", "user", content={"username": "paolo", "password": "123"})["id"]
         self.open("POST", "user/%i/access" % uid, content={"id": mus1})
         self.open("POST", "user/%i/access" % uid, content={"id": mus2})
 
         for musId in [mus1, mus2, mus3]:
-            self.assertIn(musId, self.open("GET", "museum"))
+            self.assertIn(musId, self.open("GET", "site"))
 
         self.headers = {}
         self.login("paolo", "123")
 
-        self.assertEqual(self.open("GET", "museum"), [mus1, mus2])
+        self.assertEqual(self.open("GET", "site"), [mus1, mus2])
 
-        # The user cannot see the third museum so it throws 404
-        response = self.open("GET", "museum/%i" % mus3, raw_response=True)
+        # The user cannot see the third site so it throws 404
+        response = self.open("GET", "site/%i" % mus3, raw_response=True)
         self.assertEqual(404, response.status_code)
-        self.assertIn("Cannot find museum %i" % mus3, json.loads(response.data.decode())["message"])
+        self.assertIn("Cannot find site %i" % mus3, json.loads(response.data.decode())["message"])

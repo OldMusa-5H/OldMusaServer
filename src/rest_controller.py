@@ -10,7 +10,7 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
-from models import Museum, Map, Channel, Sensor, db, User, UserAccess
+from models import Site, Map, Channel, Sensor, db, User, UserAccess
 
 # The secrets module was added only in python 3.6
 # If it isn't present we can use urandom from the os module
@@ -54,15 +54,15 @@ def rest_get(clazz: Type[T], res_id: int) -> T:
     """
     Gets the resource using its id, throws 404 if it does not exist.
 
-    This method verifies also that the user can view the museum (only if the resource has an attribute called museum_id)
-    If the user cannot access the museum the
+    This method verifies also that the user can view the site (only if the resource has an attribute called site_id)
+    If the user cannot access the site the
 
     :param clazz: The resource model definition
     :param res_id: the resource id
     :return: The resource found
     """
     resource = session.query(clazz).filter(clazz.id == res_id).first()
-    if resource is None or (hasattr(resource, "museum_id") and verify_museum_visible(resource.museum_id)):
+    if resource is None or (hasattr(resource, "site_id") and verify_site_visible(resource.site_id)):
         raise NotFound("Cannot find %s '%s'" % (clazz.name, str(res_id)))
     return resource
 
@@ -205,22 +205,22 @@ def admin_required(f):
     return login_required(decorator)
 
 
-def check_museum_visible(museum_id) -> bool:
-    """Check if the user can view the museum"""
+def check_site_visible(site_id) -> bool:
+    """Check if the user can view the site"""
     if g.user.permission == "A":
         return True  # User has admin access
     count = session.query(UserAccess)\
-                   .filter(UserAccess.user_id == g.user.id, UserAccess.museum_id == museum_id)\
+                   .filter(UserAccess.user_id == g.user.id, UserAccess.site_id == site_id)\
                    .count()
     return count != 0
 
 
-def verify_museum_visible(museum_id):
+def verify_site_visible(site_id):
     """Verify that the current user can access the database, throw a NotFound (404) exception otherwise"""
 
-    if not check_museum_visible(museum_id):
-        # User cannot see the museum (he doesn't know that it exists)
-        raise NotFound("Cannot find museum %s" % museum_id)
+    if not check_site_visible(site_id):
+        # User cannot see the site (he doesn't know that it exists)
+        raise NotFound("Cannot find site %s" % site_id)
 
 
 # ---------------- Parsers initialization ----------------
@@ -246,10 +246,10 @@ user_parser.add_argument("username", type=str)
 user_parser.add_argument("password", type=str)
 user_parser.add_argument("permission", type=str)
 
-# Museum
-museum_parser = RequestParser()
-museum_parser.add_argument("name", type=str)
-museum_parser.add_argument("id_cnr", type=str)
+# Site
+site_parser = RequestParser()
+site_parser.add_argument("name", type=str)
+site_parser.add_argument("id_cnr", type=str)
 
 # Sensor
 sensor_parser = RequestParser()
@@ -372,7 +372,7 @@ class RUserAccess(Resource):
         args = id_parser.parse_args(strict=True)
         if "id" not in args:
             raise NotFound("id not found")
-        session.add(UserAccess(user_id=uid, museum_id=args["id"]))
+        session.add(UserAccess(user_id=uid, site_id=args["id"]))
         session.commit()
 
 
@@ -380,20 +380,20 @@ class RUserAccess(Resource):
 class RUserAccessEntry(Resource):
     @admin_required
     def delete(self, uid, mid):
-        deleted = session.query(UserAccess).filter(UserAccess.user_id == uid, UserAccess.museum_id == mid).delete()
+        deleted = session.query(UserAccess).filter(UserAccess.user_id == uid, UserAccess.site_id == mid).delete()
         if deleted == 0:
             raise BadRequest('Cannot find entry ' + str((uid, mid)))
         session.commit()
         return None, 202
 
 
-@api.resource("/museum")
-class RMuseumList(Resource):
+@api.resource("/site")
+class RSiteList(Resource):
     @login_required
     def get(self):
         if g.user.permission == "A":
-            # Admins can see every museum
-            sites = db.session.query(Museum).all()
+            # Admins can see every site
+            sites = db.session.query(Site).all()
         else:
             sites = g.user.sites
 
@@ -401,48 +401,48 @@ class RMuseumList(Resource):
 
     @admin_required
     def post(self):
-        args = museum_parser.parse_args(strict=True)
-        museum = rest_create(Museum, args)
-        return clean_dict(museum.to_dict()), 201
+        args = site_parser.parse_args(strict=True)
+        site = rest_create(Site, args)
+        return clean_dict(site.to_dict()), 201
 
     @admin_required
     def delete(self):
         args = id_parser.parse_args(strict=True)
         if "id" not in args:
             raise NotFound("id not found")
-        session.query(Museum).filter(Museum.id == args["id"]).delete()
+        session.query(Site).filter(Site.id == args["id"]).delete()
         session.commit()
         return None, 202
 
 
-@api.resource("/museum/<mid>")
-class RMuseum(Resource):
+@api.resource("/site/<mid>")
+class RSite(Resource):
     @login_required
     def get(self, mid):
-        verify_museum_visible(mid)
-        return clean_dict(rest_get(Museum, mid).to_dict())
+        verify_site_visible(mid)
+        return clean_dict(rest_get(Site, mid).to_dict())
 
     @admin_required
     def put(self, mid):
-        return clean_dict(rest_update(mid, museum_parser.parse_args(strict=True), Museum).to_dict())
+        return clean_dict(rest_update(mid, site_parser.parse_args(strict=True), Site).to_dict())
 
     @admin_required
     def delete(self, mid):
-        deleted = session.query(Museum).filter(Museum.id == mid).delete()
+        deleted = session.query(Site).filter(Site.id == mid).delete()
         if deleted == 0:
-            raise BadRequest('Cannot find museum' + str(mid))
+            raise BadRequest('Cannot find site' + str(mid))
         session.commit()
         return None, 202
 
 
-@api.resource("/museum/<mid>/sensor")
-class RMuseumSensors(Resource):
+@api.resource("/site/<mid>/sensor")
+class RSiteSensors(Resource):
     @login_required
     def get(self, mid):
-        verify_museum_visible(mid)
+        verify_site_visible(mid)
 
         ids = session.query(Sensor)\
-                     .filter(Sensor.museum_id == mid)\
+                     .filter(Sensor.site_id == mid)\
                      .with_entities(Sensor.id)\
                      .all()
         return [x[0] for x in ids]
@@ -453,28 +453,28 @@ class RMuseumSensors(Resource):
         return clean_dict(sensor.to_dict()), 201
 
 
-@api.resource("/museum/<mid>/map")
-class RMuseumMaps(Resource):
+@api.resource("/site/<mid>/map")
+class RSiteMaps(Resource):
     @login_required
     def get(self, mid):
-        verify_museum_visible(mid)
+        verify_site_visible(mid)
 
         ids = session.query(Map)\
-                     .filter(Map.museum_id == mid)\
+                     .filter(Map.site_id == mid)\
                      .with_entities(Map.id)\
                      .all()
         return [x[0] for x in ids]
 
     @admin_required
     def post(self, mid):
-        map = Map(museum_id=mid)
+        map = Map(site_id=mid)
         session.add(map)
         session.commit()
         return clean_dict(map.to_dict()), 201
 
 
 @api.resource("/sensor/<sid>/channel")
-class RMuseumChannels(Resource):
+class RSiteChannels(Resource):
     @login_required
     def get(self, sid):
         ids = session.query(Channel)\
@@ -496,7 +496,7 @@ class RMuseumChannels(Resource):
 class RSensor(Resource):
     @login_required
     def get(self, sid):
-        # rest_get verifies that the museum is visible from the user
+        # rest_get verifies that the site is visible from the user
         return clean_dict(rest_get(Sensor, sid).to_dict())
 
     @admin_required
@@ -512,9 +512,9 @@ class RSensor(Resource):
         return None, 202
 
     @staticmethod
-    def create_from_req(museum_id, req=None):
+    def create_from_req(site_id, req=None):
         args = sensor_parser.parse_args(strict=True, req=req)
-        args["museum_id"] = museum_id
+        args["site_id"] = site_id
         return rest_create(Sensor, args)
 
 
@@ -522,7 +522,7 @@ class RSensor(Resource):
 class RMap(Resource):
     @login_required
     def get(self, mid):
-        # rest_get verifies that the museum is visible from the user
+        # rest_get verifies that the site is visible from the user
         return clean_dict(rest_get(Map, mid).to_dict())
 
     @admin_required
@@ -534,9 +534,9 @@ class RMap(Resource):
         return None, 202
 
     @staticmethod
-    def create_from_req(self, museum_id, req=None):
+    def create_from_req(self, site_id, req=None):
         args = sensor_parser.parse_args(strict=True, req=req)
-        args["museum_id"] = museum_id
+        args["site_id"] = site_id
         return rest_create(Map, args)
 
 
@@ -544,7 +544,7 @@ class RMap(Resource):
 class RMapImage(Resource):
     @login_required
     def get(self, mid):
-        # rest_get verifies that the museum is visible from the user
+        # rest_get verifies that the site is visible from the user
         map = rest_get(Map, mid)
 
         if map.image is None:
@@ -567,7 +567,7 @@ class RMapImage(Resource):
 class RMapSensors(Resource):
     @login_required
     def get(self, mid):
-        # rest_get verifies that the museum is visible from the user
+        # rest_get verifies that the site is visible from the user
         return [x.id for x in rest_get(Map, mid).sensors]
 
 

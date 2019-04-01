@@ -19,7 +19,7 @@ class User(db.Model):
     # U: User (no permission)
     permission = db.Column(db.String(1), default="U")
 
-    sites = db.relationship("Museum", secondary="user_access")
+    sites = db.relationship("Site", secondary="user_access")
 
     def hash_password(self, password):
         self.password_hash = pwd_context.hash(password)
@@ -35,7 +35,7 @@ class User(db.Model):
         }
 
 
-class Museum(db.Model):
+class Site(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100))
     id_cnr = db.Column(db.String(50))
@@ -53,18 +53,18 @@ class Museum(db.Model):
 
 class UserAccess(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey(User.id), primary_key=True, index=True)
-    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), primary_key=True)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), primary_key=True)
 
     def to_dict(self):
         return {
             "user_id": self.user_id,
-            "museum_id": self.museum_id,
+            "site_id": self.site_id,
         }
 
 
 class Map(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), nullable=False)
     nPiano = db.Column(db.Integer)
 
     image = db.Column(db.LargeBinary)
@@ -74,14 +74,14 @@ class Map(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "museum_id": self.museum_id,
+            "site_id": self.site_id,
             "n_piano": self.nPiano,
         }
 
 
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), nullable=False)
     id_cnr = db.Column(db.String(50))
 
     name = db.Column(db.String(50))
@@ -98,7 +98,7 @@ class Sensor(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "museum_id": self.museum_id,
+            "site_id": self.site_id,
             "id_cnr": self.id_cnr,
             "name": self.name,
             "loc_map": self.loc_map,
