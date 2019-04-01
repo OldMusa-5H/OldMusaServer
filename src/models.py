@@ -12,7 +12,7 @@ db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(16), index=True)
+    username = db.Column(db.String(32), index=True)
     password_hash = db.Column(db.String(128))
 
     # A: Admin
@@ -37,8 +37,8 @@ class User(db.Model):
 
 class Museum(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String)
-    id_cnr = db.Column(db.String)
+    name = db.Column(db.String(100))
+    id_cnr = db.Column(db.String(50))
 
     maps = db.relationship("Map")
     sensors = db.relationship("Sensor")
@@ -82,16 +82,16 @@ class Map(db.Model):
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     museum_id = db.Column(db.Integer, db.ForeignKey(Museum.id), nullable=False)
-    id_cnr = db.Column(db.String)
+    id_cnr = db.Column(db.String(50))
 
-    name = db.Column(db.String)
+    name = db.Column(db.String(50))
 
     loc_map = db.Column(db.Integer, db.ForeignKey(Map.id))
     loc_x = db.Column(db.Integer)
     loc_y = db.Column(db.Integer)
 
     enabled = db.Column(db.Boolean, nullable=False, default=False)
-    status = db.Column(db.String, nullable=False, default="ok")
+    status = db.Column(db.String(100), nullable=False, default="ok")
 
     channels = db.relationship("Channel")
 
@@ -112,11 +112,11 @@ class Sensor(db.Model):
 class Channel(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sensor_id = db.Column(db.Integer, db.ForeignKey(Sensor.id), nullable=False)
-    id_cnr = db.Column(db.String)
+    id_cnr = db.Column(db.String(50))
 
-    name = db.Column(db.String)
+    name = db.Column(db.String(50))
 
-    measure_unit = db.Column(db.String)
+    measure_unit = db.Column(db.String(50))
     range_min = db.Column(db.Numeric)
     range_max = db.Column(db.Numeric)
 
