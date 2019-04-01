@@ -124,7 +124,6 @@ class FlaskrTestCase(unittest.TestCase):
         response = self.open("GET", "sensor/%i/channel" % sensor_id)
         self.assertEqual(len(response), 1)
 
-
     def test_permission_view(self):
         self.login_root()
 
@@ -141,6 +140,10 @@ class FlaskrTestCase(unittest.TestCase):
 
         self.headers = {}
         self.login("paolo", "123")
+
+        user = self.open("GET", "user_me")
+        self.assertEqual(user["username"], "paolo")
+        self.assertEqual(user["permission"], "U")
 
         self.assertEqual(self.open("GET", "site"), [mus1, mus2])
 

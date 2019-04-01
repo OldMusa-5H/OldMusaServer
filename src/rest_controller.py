@@ -303,6 +303,13 @@ class Token(Resource):
         }
 
 
+@api.resource("/user_me")
+class RUserMe(Resource):
+    @login_required
+    def get(self):
+        return g.user.to_dict()
+
+
 @api.resource("/user")
 class RUserList(Resource):
     @admin_required
