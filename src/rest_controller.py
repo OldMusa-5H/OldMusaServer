@@ -1,5 +1,4 @@
 import io
-import secrets
 from functools import wraps
 from typing import TypeVar, Type
 
@@ -13,20 +12,27 @@ from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from models import Museum, Map, Channel, Sensor, db, User, UserAccess
 
+# The secrets module was added only in python 3.6
+# If it isn't present we can use urandom from the os module
+try:
+    from secrets import token_hex
+except ImportError:
+    from os import urandom
+
+    def token_hex(nbytes=None):
+        return urandom(nbytes).hex()
+
 # This is the rest controller, it controls every query/update done trough rest (everything in the /api/* site section)
 
 # sqlalchemy session used to make query and updates
 session = db.session  # type: Session
 
 
-# TODO: user auth (https://blog.miguelgrinberg.com/post/restful-authentication-with-flask)
-# TODO: permissions
-
 api = Api()
 api.prefix = "/api"
 
 
-secret_key = secrets.token_hex(32)
+secret_key = token_hex(32)
 passw_serializer = TimedJSONWebSignatureSerializer(secret_key, expires_in=600)
 
 
