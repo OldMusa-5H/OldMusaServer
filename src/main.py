@@ -14,9 +14,9 @@ config_path = None
 
 
 for path in CONFIG_PATHS:
-    path = Path(path).resolve()
+    path = Path(path)
     if path.is_file():
-        config_path = path
+        config_path = path.resolve()
         break
 
 if config_path is None:
