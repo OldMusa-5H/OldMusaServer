@@ -52,8 +52,8 @@ class Site(db.Model):
 
 
 class UserAccess(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id), primary_key=True, index=True)
-    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id), ondelete="CASCADE", primary_key=True, index=True)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), ondelete="CASCADE", primary_key=True)
 
     def to_dict(self):
         return {
