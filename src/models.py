@@ -64,7 +64,7 @@ class UserAccess(db.Model):
 
 class Map(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), nullable=False)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id, ondelete="CASCADE"), nullable=False)
     nPiano = db.Column(db.Integer)
 
     image = db.Column(db.LargeBinary)
@@ -81,12 +81,12 @@ class Map(db.Model):
 
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    site_id = db.Column(db.Integer, db.ForeignKey(Site.id), nullable=False)
+    site_id = db.Column(db.Integer, db.ForeignKey(Site.id, ondelete="CASCADE"), nullable=False)
     id_cnr = db.Column(db.String(50))
 
     name = db.Column(db.String(50))
 
-    loc_map = db.Column(db.Integer, db.ForeignKey(Map.id))
+    loc_map = db.Column(db.Integer, db.ForeignKey(Map.id, ondelete="SET NULL"))
     loc_x = db.Column(db.Integer)
     loc_y = db.Column(db.Integer)
 
@@ -111,7 +111,7 @@ class Sensor(db.Model):
 
 class Channel(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sensor_id = db.Column(db.Integer, db.ForeignKey(Sensor.id), nullable=False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey(Sensor.id, ondelete="CASCADE"), nullable=False)
     id_cnr = db.Column(db.String(50))
 
     name = db.Column(db.String(50))

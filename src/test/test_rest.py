@@ -151,3 +151,23 @@ class FlaskrTestCase(unittest.TestCase):
         response = self.open("GET", "site/%i" % mus3, raw_response=True)
         self.assertEqual(404, response.status_code)
         self.assertIn("Cannot find site %i" % mus3, json.loads(response.data.decode())["message"])
+
+
+    def test_foreign_key(self):
+        self.login_root()
+
+        mid = self.open("POST", "site")["id"]
+
+        # Add map
+        response = self.open("POST", "site/%i/map" % mid)
+        map_id = response["id"]
+
+        # Add sensor
+        response = self.open("POST", "site/%i/sensor" % mid, content={ "loc_map": map_id })
+        sid = response["id"]
+
+        # Add channel
+        response = self.open("POST", "sensor/%i/channel" % sid)
+        ch_id = response["id"]
+
+        self.open("DELETE", "map/%i" % map_id)
