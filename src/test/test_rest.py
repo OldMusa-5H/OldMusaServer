@@ -1,9 +1,13 @@
+import datetime
 import json
 import unittest
 
 from flask import Response
 
 import main
+import models
+from rest_controller import session
+from util import date_format, parse_date
 
 root_password = main.config.setdefault("password", "password")
 
@@ -152,7 +156,6 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(404, response.status_code)
         self.assertIn("Cannot find site %i" % mus3, json.loads(response.data.decode())["message"])
 
-
     def test_foreign_key(self):
         self.login_root()
 
@@ -171,3 +174,87 @@ class FlaskrTestCase(unittest.TestCase):
         ch_id = response["id"]
 
         self.open("DELETE", "map/%i" % map_id)
+
+    def test_readings(self):
+        if not main.app.config['SQLALCHEMY_BINDS']['cnr'].startswith('mysql'):
+            raise unittest.SkipTest("Cnr database is not mysql (does not support doubles)")
+
+        models.db.create_all(bind="cnr")
+
+        if session.query(models.ReadingData).count() > 0:
+            raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
+
+        self.login_root()
+
+        site = self.open("POST", "site", content={"name": "testsite"})["id"]
+
+        cnr_site = site + 100000
+
+        self.open("PUT", "site/%i" % site, content={"id_cnr": cnr_site})
+
+        # Add sensor
+        sensor = self.open("POST", "site/%i/sensor" % site, content={"name": "testsensor"})["id"]
+
+        cnr_station = sensor + 100000
+
+        self.open("PUT", "sensor/%i" % sensor, content={"id_cnr": cnr_station})
+
+        # Add Channel
+        channel = self.open("POST", "sensor/%i/channel" % sensor, content={"name": "testchannel"})["id"]
+
+        cnr_channel = channel + 100000
+        self.open("PUT", "channel/%i" % channel, content={"id_cnr": cnr_channel})
+
+        test_value_count = 10
+
+        start_date = datetime.datetime.now()
+        end_date = start_date + datetime.timedelta(minutes=test_value_count)
+
+        data = [{
+            "value_min": (x * 10 + 1),
+            "value_avg": (x * 10 + 2),
+            "value_max": (x * 10 + 3),
+            "date": (start_date + datetime.timedelta(minutes=x)),
+        } for x in range(0, test_value_count)]
+
+        mods = [
+            models.ReadingData(
+                site_id=cnr_site, station_id=cnr_station, channel_id=cnr_channel,
+                **d
+            ) for d in data
+        ]
+
+        session.add_all(mods)
+        session.commit()
+
+        def comp_data_list(a, b):
+            self.assertEqual(len(a), len(b))
+
+            for x, y in zip(a, b):
+                self.assertEqual(parse_date(x["date"]), parse_date(y["date"]))
+                self.assertAlmostEqual(float(x["value_min"]), float(y["value_min"]))
+                self.assertAlmostEqual(float(x["value_avg"]), float(y["value_avg"]))
+                self.assertAlmostEqual(float(x["value_max"]), float(y["value_max"]))
+
+        result = self.open("GET", "channel/%i/readings" % channel, content={
+            "start": start_date.strftime(date_format),
+            "end": end_date.strftime(date_format),
+        })
+        comp_data_list(data, result)
+
+        result = self.open("GET", "channel/%i/readings" % channel, content={
+            "start": start_date.strftime(date_format),
+            "end": (start_date + datetime.timedelta(minutes=5)).strftime(date_format),
+        })
+        comp_data_list(data[:6], result)
+
+        result = self.open("GET", "channel/%i/readings" % channel, content={
+            "start": start_date.strftime(date_format),
+            "end": start_date.strftime(date_format),
+        })
+        comp_data_list([data[0]], result)
+
+        for x in mods:
+            session.delete(x)
+        session.commit()
+

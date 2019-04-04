@@ -1,4 +1,5 @@
 import io
+from datetime import datetime
 from functools import wraps
 from typing import TypeVar, Type
 
@@ -10,7 +11,8 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
-from models import Site, Map, Channel, Sensor, db, User, UserAccess
+from util import clean_dict, parse_date, date_format
+from models import Site, Map, Channel, Sensor, db, User, UserAccess, ReadingData
 
 # The secrets module was added only in python 3.6
 # If it isn't present we can use urandom from the os module
@@ -140,10 +142,6 @@ def rest_update(res_id, args: dict, res_class: Type[T], empty_throw=True, commit
     return rest_get(res_class, res_id)
 
 
-def clean_dict(d: dict):
-    return {key: val for (key, val) in d.items() if val is not None}
-
-
 # ---------------- Auth methods ----------------
 
 def check_auth_token(token):
@@ -232,7 +230,7 @@ def verify_site_visible(site_id):
 
 # General parser that parses only the id
 id_parser = RequestParser()
-id_parser.add_argument("id", type=int)
+id_parser.add_argument("id", type=int, required=True)
 
 
 # Login
@@ -377,8 +375,7 @@ class RUserAccess(Resource):
     @admin_required
     def post(self, uid):
         args = id_parser.parse_args(strict=True)
-        if "id" not in args:
-            raise NotFound("id not found")
+
         session.add(UserAccess(user_id=uid, site_id=args["id"]))
         session.commit()
 
@@ -415,8 +412,7 @@ class RSiteList(Resource):
     @admin_required
     def delete(self):
         args = id_parser.parse_args(strict=True)
-        if "id" not in args:
-            raise NotFound("id not found")
+
         session.query(Site).filter(Site.id == args["id"]).delete()
         session.commit()
         return None, 202
@@ -495,8 +491,6 @@ class RSiteChannels(Resource):
         args = channel_parser.parse_args(strict=True)
         args["sensor_id"] = sid
         return clean_dict(rest_create(Channel, args).to_dict()), 201
-
-
 
 
 @api.resource("/sensor/<sid>")
@@ -582,7 +576,10 @@ class RMapSensors(Resource):
 class RChannel(Resource):
     @login_required
     def get(self, cid):
-        return clean_dict(rest_get(Channel, cid).to_dict())
+        channel = rest_get(Channel, cid)
+        rest_get(Sensor, channel.sensor_id)  # Check if museum visible (performed automatically when site_id is present)
+
+        return clean_dict(channel.to_dict())
 
     @admin_required
     def put(self, cid):
@@ -601,14 +598,53 @@ class RChannel(Resource):
         return rest_create(Channel, args)
 
 
+@api.resource("/channel/<cid>/readings")
+class RChannelData(Resource):
+    def __init__(self):
+        self.request_parser = RequestParser()
+        self.request_parser.add_argument("start", type=parse_date, required=True, nullable=False)
+        self.request_parser.add_argument("end", type=parse_date, required=True, nullable=False)
+        self.request_parser.add_argument("precision", choices=["atomic"], default="atomic")
+
+    def get_atomic(self, site_id: int, station_id: int, channel_id: int, start: datetime, end: datetime):
+        data = session.query(ReadingData).filter(
+            ReadingData.site_id == site_id,
+            ReadingData.station_id == station_id,
+            ReadingData.channel_id == channel_id,
+            ReadingData.date >= start,
+            ReadingData.date <= end
+        ).all()
+
+        return [
+            clean_dict({
+                "date": x.date.strftime(date_format),
+                "value_min": str(x.value_min),
+                "value_avg": str(x.value_avg),
+                "value_max": str(x.value_max),
+                "deviation": str(x.deviation),
+                "error": x.error,
+            }) for x in data
+        ]
+
+    @login_required
+    def get(self, cid):
+        args = self.request_parser.parse_args(strict=True)
+        channel = rest_get(Channel, cid)
+        sensor = rest_get(Sensor, channel.sensor_id)
+        site = rest_get(Site, sensor.site_id)
+        start = args["start"]
+        end = args["end"]
+        precision = args["precision"]
+
+        if precision is "atomic":
+            return self.get_atomic(site.id_cnr, sensor.id_cnr, channel.id_cnr, start, end)
+        else:
+            raise "Unkown precision " + precision
+
+
 @api.resource("/sensor/<sid>/channels")
 class RSensorChannels(Resource):
     @login_required
     def get(self, sid):
         # TODO: get only ids
         return [x.id for x in rest_get(Sensor, sid).channels]
-
-
-@api.resource("/channel/<cid>/readings")
-class RChannelReadings(Resource):
-    pass
