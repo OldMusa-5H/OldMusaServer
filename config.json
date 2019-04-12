@@ -7,6 +7,11 @@
     "output": "db.log"
   },
 
+  "contacter": {
+    "fcm_api_key": "",
+    "telegram_api_key": ""
+  },
+
   "root_password": "password",
 
   "listen_addr": "0.0.0.0",

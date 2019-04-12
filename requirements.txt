@@ -1,3 +1,4 @@
+pyfcm
 flask
 flask-restful
 sqlalchemy

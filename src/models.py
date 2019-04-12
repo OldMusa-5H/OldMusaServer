@@ -17,7 +17,7 @@ class User(db.Model):
 
     # A: Admin
     # U: User (no permission)
-    permission = db.Column(db.String(1), default="U")
+    permission = db.Column(db.String(1), default="U", index=True)
 
     sites = db.relationship("Site", secondary="user_access")
 
@@ -130,6 +130,16 @@ class Channel(db.Model):
             "range_min": self.range_min,
             "range_max": self.range_max,
         }
+
+
+class FCMUserContact(db.Model):
+    registration_id = db.Column(db.String(256), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id, ondelete="CASCADE"), index=True)
+
+
+class TelegramUserContact(db.Model):
+    telegram_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id, ondelete="CASCADE"), index=True)
 
 
 # CNR readings table

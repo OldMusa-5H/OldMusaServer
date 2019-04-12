@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from models import db, User
 from rest_controller import api
+import contact
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 config_path = None
@@ -42,6 +43,8 @@ app.config['SQLALCHEMY_BINDS'] = {
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+contacter = None  # type: contact.Contacter
+
 
 def setup_db():
     # Init db definitions
@@ -50,6 +53,9 @@ def setup_db():
 
     # Create all tables
     db.create_all(bind=None)
+
+    global contacter
+    contacter = contact.Contacter(**config["contacter"])
 
     # Root psw?
     root_psw = config["root_password"]

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from util import clean_dict, parse_date, date_format
-from models import Site, Map, Channel, Sensor, db, User, UserAccess, ReadingData
+from models import Site, Map, Channel, Sensor, db, User, UserAccess, ReadingData, FCMUserContact, TelegramUserContact
 
 # The secrets module was added only in python 3.6
 # If it isn't present we can use urandom from the os module
@@ -63,7 +63,7 @@ def rest_get(clazz: Type[T], res_id: int) -> T:
     :param res_id: the resource id
     :return: The resource found
     """
-    resource = session.query(clazz).filter(clazz.id == res_id).first()
+    resource = session.query(clazz).filter(clazz.id == res_id).one()
     if resource is None or (hasattr(resource, "site_id") and verify_site_visible(resource.site_id)):
         raise NotFound("Cannot find %s '%s'" % (type(clazz).__name__, str(res_id)))
     return resource
@@ -389,6 +389,32 @@ class RUserAccessEntry(Resource):
             raise BadRequest('Cannot find entry ' + str((uid, mid)))
         session.commit()
         return None, 202
+
+
+@api.resource("/user/<uid>/contact/fcm/<fcmid>")
+class RUserContactFCM(Resource):
+    @login_required
+    def put(self, uid, fcmid):
+        session.merge(FCMUserContact(user_id=uid, registration_id=fcmid))
+        session.commit()
+
+    @login_required
+    def delete(self, uid, fcmid):
+        session.delete(FCMUserContact(user_id=uid, registration_id=fcmid))
+        session.commit()
+
+
+@api.resource("/user/<uid>/contact/telegram/<telid>")
+class RUserContactTelegram(Resource):
+    @login_required
+    def put(self, uid, telid):
+        session.merge(TelegramUserContact(user_id=uid, telegram_id=telid))
+        session.commit()
+
+    @login_required
+    def delete(self, uid, telid):
+        session.delete(TelegramUserContact(user_id=uid, telegram_id=telid))
+        session.commit()
 
 
 @api.resource("/site")

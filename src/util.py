@@ -1,6 +1,5 @@
 from datetime import datetime
 
-
 date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 

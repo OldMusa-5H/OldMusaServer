@@ -258,3 +258,27 @@ class FlaskrTestCase(unittest.TestCase):
             session.delete(x)
         session.commit()
 
+    def test_contacter(self):
+        self.login_root()
+
+        mus1 = self.open("POST", "site")["id"]
+
+        user1 = self.open("POST", "user", content={"username": "user1", "password": "123"})["id"]
+        user2 = self.open("POST", "user", content={"username": "user2", "password": "123"})["id"]
+        user3 = self.open("POST", "user", content={"username": "user3", "password": "123"})["id"]
+
+        self.open("POST", "user/%i/access" % user1, content={"id": mus1})
+        self.open("POST", "user/%i/access" % user2, content={"id": mus1})
+
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user1, "user1_fcm1"))
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user1, "user1_fcm2"))
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user2, "user2_fcm"))
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user3, "user3_fcm"))
+
+        self.assertEqual(["user1_fcm1", "user1_fcm2", "user2_fcm"], main.contacter.get_fcm_listeners(mus1))
+
+        mus2 = self.open("POST", "site")["id"]
+        self.open("POST", "user/%i/access" % user1, content={"id": mus2})
+        self.open("POST", "user/%i/access" % user3, content={"id": mus2})
+
+        self.assertEqual(["user1_fcm1", "user1_fcm2", "user3_fcm"], main.contacter.get_fcm_listeners(mus2))
