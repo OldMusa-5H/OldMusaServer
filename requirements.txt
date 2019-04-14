@@ -1,3 +1,4 @@
+itsdangerous
 pyfcm
 flask
 flask-restful

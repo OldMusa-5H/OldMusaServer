@@ -6,7 +6,7 @@ from typing import TypeVar, Type
 from flask import send_file, request, g
 from flask_restful import Api, Resource
 from flask_restful.reqparse import RequestParser
-from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired, BadSignature
+from itsdangerous import SignatureExpired, BadSignature, JSONWebSignatureSerializer
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
@@ -35,7 +35,7 @@ api.prefix = "/api"
 
 
 secret_key = token_hex(32)
-passw_serializer = TimedJSONWebSignatureSerializer(secret_key, expires_in=600)
+passw_serializer = JSONWebSignatureSerializer(secret_key)
 
 
 # ---------------- Utility methods ----------------
@@ -177,8 +177,7 @@ def verify_password(req=None):
     return True
 
 
-def generate_auth_token(user_id: str, expiration: int = 600) -> bytes:
-    passw_serializer.expires_in = expiration
+def generate_auth_token(user_id: str) -> bytes:
     return passw_serializer.dumps({"id": user_id})
 
 
@@ -292,12 +291,10 @@ class Token(Resource):
         if user is None or not user.verify_password(data["password"]):
             raise NotFound("Wrong username or password")
 
-        duration = 600  # in seconds
         g.user = user
-        token = generate_auth_token(user.id, duration)
+        token = generate_auth_token(user.id)
         return {
-            "token": token.decode("ascii"),
-            "duration": duration
+            "token": token.decode("ascii")
         }
 
 
