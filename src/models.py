@@ -7,6 +7,8 @@ from passlib.apps import custom_app_context as pwd_context
 # If you don't understand any of this go read the sqlalchemy documentation
 from sqlalchemy.dialects.mysql import DOUBLE
 
+from util import get_unix_time
+
 db = SQLAlchemy()
 
 
@@ -14,6 +16,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(32), index=True)
     password_hash = db.Column(db.String(128))
+    last_password_change = db.Column(db.BIGINT)
 
     # A: Admin
     # U: User (no permission)
@@ -22,7 +25,11 @@ class User(db.Model):
     sites = db.relationship("Site", secondary="user_access")
 
     def hash_password(self, password):
-        self.password_hash = pwd_context.hash(password)
+        phash = pwd_context.hash(password)
+        if phash == self.last_password_change:
+            return
+        self.password_hash = phash
+        self.last_password_change = get_unix_time()
 
     def verify_password(self, password) -> bool:
         return pwd_context.verify(password, self.password_hash)

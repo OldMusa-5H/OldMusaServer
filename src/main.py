@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from models import db, User
 from rest_controller import api
 import contact
+import util
+
+util.install_sqlite3_foreign_fix()
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 config_path = None

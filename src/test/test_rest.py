@@ -128,6 +128,9 @@ class FlaskrTestCase(unittest.TestCase):
         response = self.open("GET", "sensor/%i/channel" % sensor_id)
         self.assertEqual(len(response), 1)
 
+        # Cleanup
+        self.open("DELETE", "site/%i" % mid)
+
     def test_permission_view(self):
         self.login_root()
 
@@ -156,6 +159,13 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(404, response.status_code)
         self.assertIn("Cannot find site %i" % mus3, json.loads(response.data.decode())["message"])
 
+        # Cleanup
+        self.login_root()
+        self.open("DELETE", "site/%i" % mus1)
+        self.open("DELETE", "site/%i" % mus2)
+        self.open("DELETE", "site/%i" % mus3)
+        self.open("DELETE", "user/%i" % uid)
+
     def test_foreign_key(self):
         self.login_root()
 
@@ -170,10 +180,12 @@ class FlaskrTestCase(unittest.TestCase):
         sid = response["id"]
 
         # Add channel
-        response = self.open("POST", "sensor/%i/channel" % sid)
-        ch_id = response["id"]
+        self.open("POST", "sensor/%i/channel" % sid)
 
-        self.open("DELETE", "map/%i" % map_id)
+        self.open("DELETE", "map/%i" % map_id)  # This tests foreign key constraints
+
+        # Cleanup
+        self.open("DELETE", "site/%i" % mid)
 
     def test_readings(self):
         if not main.app.config['SQLALCHEMY_BINDS']['cnr'].startswith('mysql'):
@@ -258,6 +270,8 @@ class FlaskrTestCase(unittest.TestCase):
             session.delete(x)
         session.commit()
 
+        self.open("DELETE", "site/%i" % site)
+
     def test_contacter(self):
         self.login_root()
 
@@ -282,3 +296,50 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("POST", "user/%i/access" % user3, content={"id": mus2})
 
         self.assertEqual(["user1_fcm1", "user1_fcm2", "user3_fcm"], main.contacter.get_fcm_listeners(mus2))
+
+        self.open("DELETE", "user/%i" % user1)
+        self.open("DELETE", "user/%i" % user2)
+        self.open("DELETE", "user/%i" % user3)
+        self.open("DELETE", "site/%i" % mus1)
+        self.open("DELETE", "site/%i" % mus2)
+
+    def test_user_password_misc(self):
+        self.login_root()
+
+        mus1 = self.open("POST", "site")["id"]
+
+        user1 = self.open("POST", "user", content={"username": "usre1", "password": "password11"})["id"]
+        user2 = self.open("POST", "user", content={"username": "user2", "password": "password21"})["id"]
+
+        # An admin should be able to change any user's data (both username and password)
+        self.open("PUT", "user/%i" % user1, content={"username": "user1", "password": "password12"})
+        # An user should NOT be able to change another user's details
+        self.login("user2", "password21")
+        self.open("GET", "user_me")
+        response = self.open("PUT", "user/%i" % user1, content={"password": "something"}, raw_response=True)
+        self.assertEqual(401, response.status_code)
+
+        # Check token invalidation on password change
+        self.open("PUT", "user/%i" % user2, content={"password": "password22"})
+        self.open("GET", "user_me", throw_error=False)  # The password was updated and the token has been invalidated
+        self.assertEqual(401, response.status_code)
+
+        # Once we get use the new token we can login again
+        self.login("user2", "password22")
+        self.open("GET", "user_me")
+
+        # The user should be able to change it's contacts
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user2, "fcm2"))
+        # But it not be able to change other user's contacts
+        response = self.open("PUT", "user/%i/contact/fcm/%s" % (user1, "fcm1"), raw_response=True)
+        self.assertEqual(401, response.status_code)
+
+        # Admins should always be able to change the user's personal data
+        self.login_root()
+        self.open("PUT", "user/%i/contact/fcm/%s" % (user1, "fcm1"))
+
+        # Cleanup
+        self.login_root()
+        self.open("DELETE", "site/%i" % mus1)
+        self.open("DELETE", "user/%i" % user1)
+        self.open("DELETE", "user/%i" % user2)
