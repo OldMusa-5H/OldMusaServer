@@ -54,6 +54,9 @@ def setup_db():
     db.app = app
     db.init_app(app)
 
+    # Fix collations
+    util.fix_db_string_collation(db)
+
     # Create all tables
     db.create_all(bind=None)
 

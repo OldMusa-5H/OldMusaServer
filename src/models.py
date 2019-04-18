@@ -140,7 +140,7 @@ class Channel(db.Model):
 
 
 class FCMUserContact(db.Model):
-    registration_id = db.Column(db.String(256), primary_key=True)
+    registration_id = db.Column(db.String(255, collation="utf8_binary"), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey(User.id, ondelete="CASCADE"), index=True)
 
 
