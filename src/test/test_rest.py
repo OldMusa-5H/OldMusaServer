@@ -85,29 +85,19 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(400, response.status_code)
         self.assertIn("No data in update", json.loads(response.data.decode())["message"])
 
-        # Check the foreign keys
-        response = self.open("PUT", "sensor/%i" % sensor_id, raw_response=True, content={
-            "loc_map": "10000"
-        })
-        self.assertEqual(404, response.status_code)
-        self.assertIn("Cannot find map", json.loads(response.data.decode())["message"])
-
-        # Add map
-        map_id = self.open("POST", "site/%i/map" % mid)["id"]
+        # Add sensor location
         response = self.open("PUT", "sensor/%i" % sensor_id, content={
-            "loc_map": map_id,
             "loc_x": 1234,
             "loc_y": 5678,
         })
 
-        self.assertEqual(map_id, response["loc_map"])
         self.assertEqual(1234, response["loc_x"])
         self.assertEqual(5678, response["loc_y"])
 
         # Test Map image data
-        response = self.app.put(self.prefix + "map/%i/image" % map_id, data=b"png image data", content_type="image/png", headers=self.headers)
+        response = self.app.put(self.prefix + "site/%i/map" % mid, data=b"png image data", content_type="image/png", headers=self.headers)
         self.assertEqual(200, response.status_code)
-        response = self.app.get(self.prefix + "map/%i/image" % map_id, headers=self.headers)
+        response = self.app.get(self.prefix + "site/%i/map" % mid, headers=self.headers)
         self.assertEqual(200, response.status_code)
         self.assertEqual(b"png image data", response.data)
 
@@ -171,20 +161,14 @@ class FlaskrTestCase(unittest.TestCase):
 
         mid = self.open("POST", "site")["id"]
 
-        # Add map
-        response = self.open("POST", "site/%i/map" % mid)
-        map_id = response["id"]
-
         # Add sensor
-        response = self.open("POST", "site/%i/sensor" % mid, content={ "loc_map": map_id })
+        response = self.open("POST", "site/%i/sensor" % mid)
         sid = response["id"]
 
         # Add channel
         self.open("POST", "sensor/%i/channel" % sid)
 
-        self.open("DELETE", "map/%i" % map_id)  # This tests foreign key constraints
-
-        # Cleanup
+        # Cleanup and test for foreign constraints
         self.open("DELETE", "site/%i" % mid)
 
     def test_readings(self):

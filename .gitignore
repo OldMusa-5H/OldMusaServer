@@ -108,3 +108,6 @@ venv.bak/
 
 # Logs
 /**/db.log
+
+# Runtime data folder
+/**/vardata/**/

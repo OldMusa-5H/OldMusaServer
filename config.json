@@ -12,6 +12,8 @@
     "telegram_api_key": ""
   },
 
+  "map_storage_folder": "./vardata/images",
+
   "root_password": "password",
 
   "listen_addr": "0.0.0.0",

@@ -10,6 +10,7 @@ from models import db, User
 from rest_controller import api
 import contact
 import util
+import site_image
 
 util.install_sqlite3_foreign_fix()
 
@@ -37,6 +38,8 @@ with config_path.open("rt") as f:
 if config['sql_log']['enabled']:
     logging.basicConfig(filename=config['sql_log']['output'])
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+site_image.set_storage_dir(config["map_storage_folder"])
 
 # Setup flask
 app = Flask(__name__)

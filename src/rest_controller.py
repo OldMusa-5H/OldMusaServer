@@ -11,8 +11,10 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
-from models import Site, Map, Channel, Sensor, db, User, UserAccess, ReadingData, FCMUserContact, TelegramUserContact
+from models import Site, Channel, Sensor, db, User, UserAccess, ReadingData, FCMUserContact, TelegramUserContact
 from util import clean_dict, parse_date, date_format, get_unix_time
+
+import site_image as image
 
 # The secrets module was added only in python 3.6
 # If it isn't present we can use urandom from the os module
@@ -286,7 +288,6 @@ sensor_parser = RequestParser()
 sensor_parser.add_argument("id_cnr", type=str)
 sensor_parser.add_argument("name", type=str)
 
-sensor_parser.add_argument("loc_map", type=str)
 sensor_parser.add_argument("loc_x", type=int)
 sensor_parser.add_argument("loc_y", type=int)
 
@@ -506,6 +507,7 @@ class RSite(Resource):
         if deleted == 0:
             raise BadRequest('Cannot find site' + str(mid))
         session.commit()
+        RSiteMap.delete(None, mid)
         return None, 202
 
 
@@ -528,23 +530,27 @@ class RSiteSensors(Resource):
 
 
 @api.resource("/site/<mid>/map")
-class RSiteMaps(Resource):
+class RSiteMap(Resource):
     @login_required
     def get(self, mid):
         verify_site_visible(mid)
 
-        ids = session.query(Map)\
-                     .filter(Map.site_id == mid)\
-                     .with_entities(Map.id)\
-                     .all()
-        return [x[0] for x in ids]
+        path = image.get_image(mid)
+
+        if path is None:
+            raise NotFound("No map image found")
+
+        return send_file(str(path.absolute()))
 
     @admin_required
-    def post(self, mid):
-        map = Map(site_id=mid)
-        session.add(map)
-        session.commit()
-        return clean_dict(map.to_dict()), 201
+    def put(self, mid):
+        # TODO: check request.content_length
+
+        image.set_image(mid, request.get_data())
+
+    @admin_required
+    def delete(self, mid):
+        image.delete_image(mid)
 
 
 @api.resource("/sensor/<sid>/channel")
@@ -588,59 +594,6 @@ class RSensor(Resource):
         args = sensor_parser.parse_args(strict=True, req=req)
         args["site_id"] = site_id
         return rest_create(Sensor, args)
-
-
-@api.resource("/map/<mid>")
-class RMap(Resource):
-    @login_required
-    def get(self, mid):
-        # rest_get verifies that the site is visible from the user
-        return clean_dict(rest_get(Map, mid).to_dict())
-
-    @admin_required
-    def delete(self, mid):
-        deleted = session.query(Map).filter(Map.id == mid).delete()
-        if deleted == 0:
-            raise NotFound('Cannot find map' + str(mid))
-        session.commit()
-        return None, 202
-
-    @staticmethod
-    def create_from_req(self, site_id, req=None):
-        args = sensor_parser.parse_args(strict=True, req=req)
-        args["site_id"] = site_id
-        return rest_create(Map, args)
-
-
-@api.resource("/map/<mid>/image")
-class RMapImage(Resource):
-    @login_required
-    def get(self, mid):
-        # rest_get verifies that the site is visible from the user
-        map = rest_get(Map, mid)
-
-        if map.image is None:
-            raise NotFound("Map image not found")
-
-        return send_file(io.BytesIO(map.image),
-                         attachment_filename='map.png',
-                         mimetype='image/png')
-
-    @admin_required
-    def put(self, mid):
-        if request.content_type != 'image/png':
-            raise BadRequest("Image must be 'image/png'")
-        # TODO: check request.content_length
-        rest_get(Map, mid).image = request.get_data()
-        session.commit()
-
-
-@api.resource("/map/<mid>/sensors")
-class RMapSensors(Resource):
-    @login_required
-    def get(self, mid):
-        # rest_get verifies that the site is visible from the user
-        return [x.id for x in rest_get(Map, mid).sensors]
 
 
 @api.resource("/channel/<cid>")

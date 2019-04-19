@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from passlib.apps import custom_app_context as pwd_context
+from sqlalchemy_imageattach.entity import Image, image_attachment
 
 
 # Here's the sql representation of the data we need to store
@@ -16,7 +17,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(32), index=True)
     password_hash = db.Column(db.String(128))
-    last_password_change = db.Column(db.BIGINT)
+    last_password_change = db.Column(db.BIGINT, nullable=False, default=0)
 
     # A: Admin
     # U: User (no permission)
@@ -47,7 +48,6 @@ class Site(db.Model):
     name = db.Column(db.String(100))
     id_cnr = db.Column(db.String(50))
 
-    maps = db.relationship("Map")
     sensors = db.relationship("Sensor")
 
     def to_dict(self):
@@ -69,23 +69,6 @@ class UserAccess(db.Model):
         }
 
 
-class Map(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    site_id = db.Column(db.Integer, db.ForeignKey(Site.id, ondelete="CASCADE"), nullable=False)
-    nPiano = db.Column(db.Integer)
-
-    image = db.Column(db.LargeBinary)
-
-    sensors = db.relationship("Sensor")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "site_id": self.site_id,
-            "n_piano": self.nPiano,
-        }
-
-
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     site_id = db.Column(db.Integer, db.ForeignKey(Site.id, ondelete="CASCADE"), nullable=False)
@@ -93,7 +76,6 @@ class Sensor(db.Model):
 
     name = db.Column(db.String(50))
 
-    loc_map = db.Column(db.Integer, db.ForeignKey(Map.id, ondelete="SET NULL"))
     loc_x = db.Column(db.Integer)
     loc_y = db.Column(db.Integer)
 
@@ -108,7 +90,6 @@ class Sensor(db.Model):
             "site_id": self.site_id,
             "id_cnr": self.id_cnr,
             "name": self.name,
-            "loc_map": self.loc_map,
             "loc_x": self.loc_x,
             "loc_y": self.loc_y,
             "enabled": self.enabled,
