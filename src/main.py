@@ -6,11 +6,11 @@ from pathlib import Path
 from flask import Flask
 from sqlalchemy.orm import Session
 
+import contact
+import site_image
+import util
 from models import db, User
 from rest_controller import api
-import contact
-import util
-import site_image
 
 util.install_sqlite3_foreign_fix()
 

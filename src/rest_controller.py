@@ -1,4 +1,3 @@
-import io
 from datetime import datetime
 from functools import wraps
 from typing import TypeVar, Type
@@ -11,10 +10,9 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
+import site_image as image
 from models import Site, Channel, Sensor, db, User, UserAccess, ReadingData, FCMUserContact, TelegramUserContact
 from util import clean_dict, parse_date, date_format, get_unix_time
-
-import site_image as image
 
 # The secrets module was added only in python 3.6
 # If it isn't present we can use urandom from the os module

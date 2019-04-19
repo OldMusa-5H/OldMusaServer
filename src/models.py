@@ -1,14 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
 from passlib.apps import custom_app_context as pwd_context
-from sqlalchemy_imageattach.entity import Image, image_attachment
+from sqlalchemy.dialects.mysql import DOUBLE
 
+from util import get_unix_time
 
 # Here's the sql representation of the data we need to store
 # don't put any logic in this file, it should only contain sql definitions
 # If you don't understand any of this go read the sqlalchemy documentation
-from sqlalchemy.dialects.mysql import DOUBLE
-
-from util import get_unix_time
 
 db = SQLAlchemy()
 
