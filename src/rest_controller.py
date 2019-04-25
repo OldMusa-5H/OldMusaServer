@@ -658,7 +658,7 @@ class RChannelData(Resource):
         end = args["end"]
         precision = args["precision"]
 
-        if precision is "atomic":
+        if precision == "atomic":
             return self.get_atomic(site.id_cnr, sensor.id_cnr, channel.id_cnr, start, end)
         else:
             raise BadRequest("Unknown precision " + precision)
