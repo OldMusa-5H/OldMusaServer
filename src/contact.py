@@ -11,7 +11,7 @@ session = models.db.session  # type: Session
 
 class Contacter:
     def __init__(self, fcm_api_key, telegram_api_key):
-        if fcm_api_key is None or fcm_api_key is "":
+        if fcm_api_key is None or fcm_api_key == "":
             self.fcm = None
             self.warn("No FCM key found, disabling")
         else:

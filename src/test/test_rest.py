@@ -51,7 +51,7 @@ class FlaskrTestCase(unittest.TestCase):
                                .format(method, self.prefix + url, response.status, response.data))
 
         data = response.data
-        if data is None or data is "":
+        if data is None or data == "":
             return data
 
         return json.loads(data.decode())

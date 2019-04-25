@@ -348,7 +348,7 @@ class RUserList(Resource):
         args = user_parser.parse_args(strict=True)
         passw = args.get("password")
 
-        if passw is None or passw is "":
+        if passw is None or passw == "":
             raise NotFound("Password not found")
 
         if "username" not in args:
