@@ -17,7 +17,6 @@ util.install_sqlite3_foreign_fix()
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 config_path = None
 
-
 for path in CONFIG_PATHS:
     path = Path(path)
     if path.is_file():
@@ -32,7 +31,6 @@ print("Using config: " + str(config_path))
 with config_path.open("rt") as f:
     config = json.load(f)
 
-
 # Setup logging to file (it is in the git.ignore file so it won't be pushed)
 # Log every sqlalchemy entry that is at least of INFO level
 if config['sql_log']['enabled']:
@@ -45,7 +43,7 @@ site_image.set_storage_dir(config["map_storage_folder"])
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config['config_db']
 app.config['SQLALCHEMY_BINDS'] = {
-    'cnr':  config['cnr_db']
+    'cnr': config['cnr_db']
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -70,9 +68,15 @@ def setup_db():
     root_psw = config["root_password"]
     if root_psw is not None:
         session = db.session  # type: Session
-        user = User(username="root", permission="A")
-        user.hash_password(root_psw)
-        session.add(user)
+
+        root = session.query(User).filter(User.username == "root").first()
+
+        if root is None:
+            root = User(username="root", permission="A")
+            session.add(root)
+
+        root.hash_password(root_psw)
+
         session.commit()
 
     # Init rest declarations

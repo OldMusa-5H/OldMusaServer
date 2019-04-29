@@ -13,7 +13,7 @@ db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(32), index=True)
+    username = db.Column(db.String(32), unique=True, index=True)
     password_hash = db.Column(db.String(128))
     last_password_change = db.Column(db.BIGINT, nullable=False, default=0)
 
