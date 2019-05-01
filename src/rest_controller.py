@@ -384,12 +384,16 @@ class RUser(Resource):
         if passw is not None:
             del args["password"]
 
-        if args == {}:
-            user = rest_get(User, uid)
-        else:
+        user = rest_get(User, uid)
+
+        if args != {}:
             if g.user.permission != 'A':
-                raise Unauthorized("Non admin users can only change their password")
-            user = rest_update(uid, args, User, empty_throw=passw is not None, commit=False)  # type: User
+                # A non-admin user can only change his password
+                # If the user is not an admin but he has provided the same user/perm then no error should be thrown
+                if not (user.username == args['username'] and user.permission == args['permission']):
+                    raise Unauthorized("Non admin users can only change their password")
+            else:
+                user = rest_update(uid, args, User, empty_throw=passw is not None, commit=False)  # type: User
 
         if passw is not None:
             user.hash_password(passw)
