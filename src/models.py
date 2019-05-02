@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
 from passlib.apps import custom_app_context as pwd_context
-from sqlalchemy.dialects.mysql import DOUBLE
 
 from util import get_unix_time
 
@@ -131,6 +130,8 @@ class TelegramUserContact(db.Model):
 # CNR readings table
 # It stores all the channel readings
 # It's in a different database (hence the bind_key)
+# The only type difference is DOUBLE that is renamed to REAL for inter-db support
+# The original mysql page that describes REAL-DOUBLE aliases: https://dev.mysql.com/doc/refman/5.7/en/numeric-types.html
 class ReadingData(db.Model):
     __bind_key__ = 'cnr'
     __tablename__ = 't_rilevamento_dati'
@@ -149,10 +150,10 @@ class ReadingData(db.Model):
     station_id = db.Column("idstazione", db.String(50), nullable=False, default="")
     sensor_id = db.Column("idsensore", db.String(50), nullable=False, default="")
     channel_id = db.Column("canale", db.String(50), nullable=False, default="")
-    value_min = db.Column("valore_min", DOUBLE, nullable=False, default=0)
-    value_avg = db.Column("valore_med", DOUBLE)
-    value_max = db.Column("valore_max", DOUBLE)
-    deviation = db.Column("scarto", DOUBLE)
+    value_min = db.Column("valore_min", db.REAL, nullable=False, default=0)
+    value_avg = db.Column("valore_med", db.REAL)
+    value_max = db.Column("valore_max", db.REAL)
+    deviation = db.Column("scarto", db.REAL)
     date = db.Column("data", db.DateTime, nullable=False)
     error = db.Column("errore", db.String(1))
     measure_unit = db.Column("misura", db.String(50), nullable=False, default="")

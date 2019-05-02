@@ -172,9 +172,6 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("DELETE", "site/%i" % mid)
 
     def test_readings(self):
-        if not main.app.config['SQLALCHEMY_BINDS']['cnr'].startswith('mysql'):
-            raise unittest.SkipTest("Cnr database is not mysql (does not support doubles)")
-
         models.db.create_all(bind="cnr")
 
         if session.query(models.ReadingData).count() > 0:
