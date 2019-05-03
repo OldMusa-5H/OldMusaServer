@@ -112,8 +112,8 @@ class Channel(db.Model):
             "id_cnr": self.id_cnr,
             "name": self.name,
             "measure_unit": self.measure_unit,
-            "range_min": self.range_min,
-            "range_max": self.range_max,
+            "range_min": str(self.range_min) if self.range_min is not None else None,
+            "range_max": str(self.range_max) if self.range_max is not None else None,
         }
 
 

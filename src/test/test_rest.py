@@ -6,6 +6,7 @@ from flask import Response
 
 import main
 import models
+import alarm_controller
 from rest_controller import session
 from util import date_format, parse_date
 
@@ -172,6 +173,9 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("DELETE", "site/%i" % mid)
 
     def test_readings(self):
+        if not main.app.config['SQLALCHEMY_BINDS']['cnr'].startswith('mysql'):
+            raise unittest.SkipTest("Cnr database is not mysql (does not support doubles)")
+
         models.db.create_all(bind="cnr")
 
         if session.query(models.ReadingData).count() > 0:
@@ -324,3 +328,71 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("DELETE", "site/%i" % mus1)
         self.open("DELETE", "user/%i" % user1)
         self.open("DELETE", "user/%i" % user2)
+
+    def test_alarm_controller(self):
+        models.db.create_all(bind="cnr")
+
+        if session.query(models.ReadingData).count() > 0:
+            raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
+
+        self.login_root()
+
+        # First Site
+        site = self.open("POST", "site", content={"name": "testsite"})["id"]
+        sensor = self.open("POST", "site/%i/sensor" % site, content={"name": "testsensor"})["id"]
+
+        # Add Channel
+        channel = self.open("POST", "sensor/%i/channel" % sensor, content={"name": "testchannel"})["id"]
+        cnr_channel = channel + 1000
+        self.open("PUT", "channel/%i" % channel, content={
+            "id_cnr": cnr_channel,
+            "range_min": "100",
+            "range_max": "200"
+        })
+
+        # Add Readings
+        readings = [
+            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
+                               value_min=150, value_max=170, date=datetime.datetime(2019, 5, 2, 8)),
+            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
+                               value_min=50, value_max=170, date=datetime.datetime(2019, 5, 2, 9)),
+            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
+                               value_min=140, value_max=180, date=datetime.datetime(2019, 5, 2, 10)),
+            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
+                               value_min=150, value_max=250, date=datetime.datetime(2019, 5, 2, 11))
+        ]
+        session.add_all(readings)
+        session.commit()
+
+        # Second Site
+        site2 = self.open("POST", "site", content={"name": "testsite"})["id"]
+        sensor2 = self.open("POST", "site/%i/sensor" % site2, content={"name": "testsensor2"})["id"]
+
+        # Add Channel
+        channel2 = self.open("POST", "sensor/%i/channel" % sensor2, content={"name": "testchannel2"})["id"]
+        cnr_channel2 = channel2 + 1000
+        self.open("PUT", "channel/%i" % channel2, content={
+            "id_cnr": cnr_channel2,
+            "range_min": 70,
+            "range_max": 90
+        })
+
+        # Add Readings
+        readings2 = [
+            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
+                               value_min=51, value_max=78, date=datetime.datetime(2019, 5, 2, 8)),
+            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
+                               value_min=71, value_max=78, date=datetime.datetime(2019, 5, 2, 9)),
+            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
+                               value_min=71, value_max=78, date=datetime.datetime(2019, 5, 2, 10)),
+            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
+                               value_min=71, value_max=88, date=datetime.datetime(2019, 5, 2, 11)),
+        ]
+
+        session.add_all(readings2)
+        session.commit()
+
+        finder = alarm_controller.Alarm_finder()
+        mmin, mmax = finder.data_comparing()
+        print ("min: " + str(mmin))
+        print ("max: " + str(mmax))
