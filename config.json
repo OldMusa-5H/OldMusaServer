@@ -13,6 +13,7 @@
   },
 
   "map_storage_folder": "./vardata/images",
+  "last_alarm_reading_file": "./vardata/last_alarm_reading.txt",
 
   "root_password": "password",
 

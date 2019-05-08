@@ -11,11 +11,13 @@ import site_image
 import util
 from models import db, User
 from rest_controller import api
+from alarm_controller import AlarmFinder
 
 util.install_sqlite3_foreign_fix()
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 config_path = None
+
 
 for path in CONFIG_PATHS:
     path = Path(path)
@@ -38,6 +40,7 @@ if config['sql_log']['enabled']:
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 site_image.set_storage_dir(config["map_storage_folder"])
+alarm_finder = AlarmFinder(file_path=config["last_alarm_reading_file"])
 
 # Setup flask
 app = Flask(__name__)

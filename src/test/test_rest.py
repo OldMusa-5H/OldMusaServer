@@ -173,8 +173,6 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("DELETE", "site/%i" % mid)
 
     def test_readings(self):
-        if not main.app.config['SQLALCHEMY_BINDS']['cnr'].startswith('mysql'):
-            raise unittest.SkipTest("Cnr database is not mysql (does not support doubles)")
 
         models.db.create_all(bind="cnr")
 
@@ -339,7 +337,7 @@ class FlaskrTestCase(unittest.TestCase):
 
         # First Site
         site = self.open("POST", "site", content={"name": "testsite"})["id"]
-        sensor = self.open("POST", "site/%i/sensor" % site, content={"name": "testsensor"})["id"]
+        sensor = self.open("POST", "site/%i/sensor" % site, content={"name": "testsensor", "enabled": True, "id_cnr": 1111})["id"]
 
         # Add Channel
         channel = self.open("POST", "sensor/%i/channel" % sensor, content={"name": "testchannel"})["id"]
@@ -352,47 +350,50 @@ class FlaskrTestCase(unittest.TestCase):
 
         # Add Readings
         readings = [
-            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
-                               value_min=150, value_max=170, date=datetime.datetime(2019, 5, 2, 8)),
-            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
-                               value_min=50, value_max=170, date=datetime.datetime(2019, 5, 2, 9)),
-            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
-                               value_min=140, value_max=180, date=datetime.datetime(2019, 5, 2, 10)),
-            models.ReadingData(site_id=site, room_id=1, station_id=sensor, sensor_id=1, channel_id=cnr_channel,
-                               value_min=150, value_max=250, date=datetime.datetime(2019, 5, 2, 11))
+            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+                               value_min="150", value_max="170", date=datetime.datetime(2019, 5, 2, 8)),
+            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+                               value_min="50", value_max="170", date=datetime.datetime(2019, 5, 2, 9)),
+            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+                               value_min="140", value_max="180", date=datetime.datetime(2019, 5, 2, 10)),
+            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+                               value_min="150", value_max="250", date=datetime.datetime(2019, 5, 2, 11))
         ]
         session.add_all(readings)
         session.commit()
 
         # Second Site
         site2 = self.open("POST", "site", content={"name": "testsite"})["id"]
-        sensor2 = self.open("POST", "site/%i/sensor" % site2, content={"name": "testsensor2"})["id"]
+        sensor2 = self.open("POST", "site/%i/sensor" % site2, content={"name": "testsensor2", "enabled": True, "id_cnr": 2222})["id"]
 
         # Add Channel
         channel2 = self.open("POST", "sensor/%i/channel" % sensor2, content={"name": "testchannel2"})["id"]
         cnr_channel2 = channel2 + 1000
         self.open("PUT", "channel/%i" % channel2, content={
             "id_cnr": cnr_channel2,
-            "range_min": 70,
-            "range_max": 90
+            "range_min": "70",
+            "range_max": "90"
         })
 
         # Add Readings
         readings2 = [
-            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
-                               value_min=51, value_max=78, date=datetime.datetime(2019, 5, 2, 8)),
-            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
-                               value_min=71, value_max=78, date=datetime.datetime(2019, 5, 2, 9)),
-            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
-                               value_min=71, value_max=78, date=datetime.datetime(2019, 5, 2, 10)),
-            models.ReadingData(site_id=site2, room_id=3, station_id=sensor2, sensor_id=3, channel_id=cnr_channel2,
-                               value_min=71, value_max=88, date=datetime.datetime(2019, 5, 2, 11)),
+            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+                               value_min="51", value_max="78", date=datetime.datetime(2019, 5, 2, 8)),
+            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+                               value_min="71", value_max="78", date=datetime.datetime(2019, 5, 2, 9)),
+            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+                               value_min="71", value_max="78", date=datetime.datetime(2019, 5, 2, 10)),
+            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+                               value_min="71", value_max="88", date=datetime.datetime(2019, 5, 2, 11)),
         ]
 
         session.add_all(readings2)
         session.commit()
 
-        finder = alarm_controller.Alarm_finder()
-        mmin, mmax = finder.data_comparing()
-        print ("min: " + str(mmin))
-        print ("max: " + str(mmax))
+        finder = alarm_controller.AlarmFinder()
+        mmin, mmax = finder.compare_data()
+        self.assertEqual(50.0, mmin[channel][0])
+        self.assertEqual(51.0, mmin[channel2][0])
+        self.assertEqual(250.0, mmax[channel][0])
+        self.assertEqual(1, len(mmax))
+        self.assertEqual(2, len(mmin))
