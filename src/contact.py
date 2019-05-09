@@ -1,5 +1,5 @@
 import sys
-from typing import List
+from typing import List, Optional
 
 import pyfcm
 from sqlalchemy.orm import Session
@@ -10,7 +10,10 @@ session = models.db.session  # type: Session
 
 
 class Contacter:
-    def __init__(self, fcm_api_key, telegram_api_key):
+    def __init__(self):
+        self.fcm = None  # type: Optional[pyfcm.FCMNotification]
+
+    def load_config(self, fcm_api_key, telegram_api_key):
         if fcm_api_key is None or fcm_api_key == "":
             self.fcm = None
             self.warn("No FCM key found, disabling")

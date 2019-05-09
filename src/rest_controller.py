@@ -37,6 +37,8 @@ api.prefix = "/api"
 secret_key = token_hex(32)
 passw_serializer = JSONWebSignatureSerializer(secret_key)
 
+site_image = image.ImageManager()
+
 
 # ---------------- Utility methods ----------------
 # Utility methods used to automate the creation and query of resources
@@ -537,7 +539,7 @@ class RSiteMap(Resource):
     def get(self, mid):
         verify_site_visible(mid)
 
-        path = image.get_image(mid)
+        path = site_image.get_image(mid)
 
         if path is None:
             raise NotFound("No map image found")
@@ -548,11 +550,11 @@ class RSiteMap(Resource):
     def put(self, mid):
         # TODO: check request.content_length
 
-        image.set_image(mid, request.get_data())
+        site_image.set_image(mid, request.get_data())
 
     @admin_required
     def delete(self, mid):
-        image.delete_image(mid)
+        site_image.delete_image(mid)
 
 
 @api.resource("/sensor/<sid>/channel")

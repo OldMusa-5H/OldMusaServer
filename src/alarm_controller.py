@@ -1,29 +1,32 @@
-import io
 import datetime
-from sqlalchemy import func, desc
-from sqlalchemy.orm import Session
-from models import Channel, ReadingData, Sensor, Site
-import rest_controller
-import re
+import os
 
-#This class warn the whole system if it find readings values out of min or max range of its own channel
+from sqlalchemy import func, desc
+
+import rest_controller
+from models import Channel, ReadingData, Sensor
+
+
+# This class warn the whole system if it find readings values out of min or max range of its own channel
+
 
 class AlarmFinder:
-    def __init__(self, file_path=None):
-        if file_path is not None:
-            self.file_path = file_path
+    def __init__(self):
+        self.file_path = None  # type: str
+        self.last_time = None  # type: datetime.datetime
 
-            try:
-                self.last_data_file = open(self.file_path, "r")
-                date = self.last_data_file.read().split(" ")
-                self.last_data_file.close()
-                self.last_time = datetime.datetime(int(date[0]), int(date[1]), int(date[2]), int(date[3]), int(date[4]),
-                                                   int(date[5]), int(date[6]))
+    def load_config(self, file_path):
+        self.file_path = file_path
 
-            except:
-                self.last_time = datetime.datetime.min
-        else:
+        if not os.path.isfile(self.file_path):
+            # If no file is found reset last_time
             self.last_time = datetime.datetime.min
+            return
+
+        with open(self.file_path, "rt") as fp:
+            date = fp.read().split(" ")
+            self.last_time = datetime.datetime(int(date[0]), int(date[1]), int(date[2]), int(date[3]), int(date[4]),
+                                               int(date[5]), int(date[6]))
 
     def ultimate_time(self):
         """Returns the date and hour of the last reading in the CNR database."""
@@ -62,13 +65,9 @@ class AlarmFinder:
                       " " + str(self.last_time.hour) + " " + str(self.last_time.minute) + \
                       " " + str(self.last_time.second) + " " + str(self.last_time.microsecond)
 
-        try:
-            self.last_data_file = open(self.file_path, "w")
-            self.last_data_file.write(time_string)
-            self.last_data_file.close()
-
-        except:
-            pass
+        if self.file_path is not None:
+            with open(self.file_path, "w") as fp:
+                fp.write(time_string)
 
         return query_min, query_max
 

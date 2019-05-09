@@ -2,7 +2,7 @@ import datetime
 import json
 import unittest
 
-from flask import Response
+from flask import Response, Flask
 
 import main
 import models
@@ -10,23 +10,33 @@ import alarm_controller
 from rest_controller import session
 from util import date_format, parse_date
 
-root_password = main.config.setdefault("password", "password")
+main = main.Main()  # type: main.Main
+app = None  # type: Flask
+root_password = ""  # type: str
 
 
 class FlaskrTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.main = main
         self.prefix = "/api/"
         self.headers = {}
-        self.app = main.app.test_client()
 
     @classmethod
     def setUpClass(cls):
+        main.startup.register(cls.inject_setup, after="setup_flask")
+        main.setup()
+
+    @staticmethod
+    def inject_setup():
+        global app, root_password
+        main.app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
         main.app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
         main.app.testing = True
         main.app.debug = True
-        with main.app.app_context():
-            main.setup_db()
+
+        root_password = main.config.setdefault("root_password", "password")
+        app = main.app.test_client()
 
     def open(self, method, url, content=None, args=None, throw_error=True, raw_response=False, headers=None):
         """Utility method to send a query request to the server, only empty or json response is supported"""
@@ -42,7 +52,7 @@ class FlaskrTestCase(unittest.TestCase):
         if content is not None:
             fwd_args["json"] = content
 
-        response = self.app.open(self.prefix + url, **fwd_args)  # type: Response
+        response = app.open(self.prefix + url, **fwd_args)  # type: Response
 
         if raw_response:
             return response
@@ -96,9 +106,9 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(5678, response["loc_y"])
 
         # Test Map image data
-        response = self.app.put(self.prefix + "site/%i/map" % mid, data=b"png image data", content_type="image/png", headers=self.headers)
+        response = app.put(self.prefix + "site/%i/map" % mid, data=b"png image data", content_type="image/png", headers=self.headers)
         self.assertEqual(200, response.status_code)
-        response = self.app.get(self.prefix + "site/%i/map" % mid, headers=self.headers)
+        response = app.get(self.prefix + "site/%i/map" % mid, headers=self.headers)
         self.assertEqual(200, response.status_code)
         self.assertEqual(b"png image data", response.data)
 
@@ -272,13 +282,13 @@ class FlaskrTestCase(unittest.TestCase):
         self.open("PUT", "user/%i/contact/fcm/%s" % (user2, "user2_fcm"))
         self.open("PUT", "user/%i/contact/fcm/%s" % (user3, "user3_fcm"))
 
-        self.assertEqual(["user1_fcm1", "user1_fcm2", "user2_fcm"], main.contacter.get_fcm_listeners(mus1))
+        self.assertEqual(["user1_fcm1", "user1_fcm2", "user2_fcm"], self.main.contacter.get_fcm_listeners(mus1))
 
         mus2 = self.open("POST", "site")["id"]
         self.open("POST", "user/%i/access" % user1, content={"id": mus2})
         self.open("POST", "user/%i/access" % user3, content={"id": mus2})
 
-        self.assertEqual(["user1_fcm1", "user1_fcm2", "user3_fcm"], main.contacter.get_fcm_listeners(mus2))
+        self.assertEqual(["user1_fcm1", "user1_fcm2", "user3_fcm"], self.main.contacter.get_fcm_listeners(mus2))
 
         self.open("DELETE", "user/%i" % user1)
         self.open("DELETE", "user/%i" % user2)
@@ -391,6 +401,7 @@ class FlaskrTestCase(unittest.TestCase):
         session.commit()
 
         finder = alarm_controller.AlarmFinder()
+        finder.last_time = datetime.datetime.min
         mmin, mmax = finder.compare_data()
         self.assertEqual(50.0, mmin[channel][0])
         self.assertEqual(51.0, mmin[channel2][0])
