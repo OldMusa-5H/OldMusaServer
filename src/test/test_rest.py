@@ -408,3 +408,8 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(250.0, mmax[channel][0])
         self.assertEqual(1, len(mmax))
         self.assertEqual(2, len(mmin))
+
+        # Data cleanup
+        for x in readings + readings2:
+            session.delete(x)
+        session.commit()
