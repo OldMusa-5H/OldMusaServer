@@ -6,11 +6,14 @@ from flask import Flask
 from sqlalchemy.orm import Session
 
 import util
-from alarm_controller import AlarmFinder
+from alarm import AlarmManager
 from contact import Contacter
-from dependency import DependencyManager
 from models import db, User
 from rest_controller import api, site_image
+from util.db import session_scope
+from util.dependency import DependencyManager
+
+logging.basicConfig(level=logging.DEBUG)
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 
@@ -19,8 +22,8 @@ class Main:
     def __init__(self):
         self.__setup_done = False
         self.config = None  # type: dict
-        self.alarm_finder = AlarmFinder()
         self.contacter = Contacter()
+        self.alarm_manager = AlarmManager(self.contacter)
         self.app = None  # type: Flask
         self.startup = DependencyManager()
         self.startup.register_all(
@@ -51,11 +54,16 @@ class Main:
         # Setup logging to file (it is in the git.ignore file so it won't be pushed)
         # Log every sqlalchemy entry that is at least of INFO level
         if self.config['sql_log']['enabled']:
-            logging.basicConfig(filename=self.config['sql_log']['output'])
-            logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+            logger = logging.getLogger('sqlalchemy')
+            logger.propagate = False
+            logger.addHandler(logging.FileHandler(self.config['sql_log']['output']))
+            logger.setLevel(logging.INFO)
 
         site_image.set_storage_dir(self.config["map_storage_folder"])
-        self.alarm_finder.load_config(file_path=self.config["last_alarm_reading_file"])
+        self.alarm_manager.load_config(
+            file_path=self.config["last_alarm_reading_file"],
+            check_interval=self.config["alarm_check_interval"]
+        )
         self.contacter.load_config(**self.config["contacter"])
 
     def setup_root_password(self):
@@ -64,17 +72,14 @@ class Main:
         if root_psw is None:
             return
 
-        session = db.session  # type: Session
+        with session_scope() as session:
+            root = session.query(User).filter(User.username == "root").first()
 
-        root = session.query(User).filter(User.username == "root").first()
+            if root is None:
+                root = User(username="root", permission="A")
+                session.add(root)
 
-        if root is None:
-            root = User(username="root", permission="A")
-            session.add(root)
-
-        root.hash_password(root_psw)
-
-        session.commit()
+            root.hash_password(root_psw)
 
     def setup_patch_fixes(self):
         util.install_sqlite3_foreign_fix()
@@ -118,10 +123,13 @@ class Main:
         self.startup.call()
         self.startup = None
 
-    def start(self):
+    def start(self, run_app=True):
         self.setup()
 
-        self.app.run(host="0.0.0.0", port=8080, debug=True)
+        self.alarm_manager.start_timer_async()
+
+        if run_app:
+            self.app.run(host="0.0.0.0", port=8080, debug=True, use_reloader=False)
 
 
 if __name__ == '__main__':

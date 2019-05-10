@@ -1,6 +1,6 @@
-from main import setup_db, app as application
+import main
 
-setup_db()
+main = main.Main()
 
-if __name__ == "__main__":
-    application.run(port=8080)
+# main.start(run_app=False)
+application = main.app

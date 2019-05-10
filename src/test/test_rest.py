@@ -6,8 +6,7 @@ from flask import Response, Flask
 
 import main
 import models
-import alarm_controller
-from rest_controller import session
+import alarm
 from util import date_format, parse_date
 
 main = main.Main()  # type: main.Main
@@ -185,6 +184,7 @@ class FlaskrTestCase(unittest.TestCase):
     def test_readings(self):
 
         models.db.create_all(bind="cnr")
+        session = main.db.create_session()
 
         if session.query(models.ReadingData).count() > 0:
             raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
@@ -340,6 +340,8 @@ class FlaskrTestCase(unittest.TestCase):
     def test_alarm_controller(self):
         models.db.create_all(bind="cnr")
 
+        session = main.db.create_session()
+
         if session.query(models.ReadingData).count() > 0:
             raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
 
@@ -400,12 +402,14 @@ class FlaskrTestCase(unittest.TestCase):
         session.add_all(readings2)
         session.commit()
 
-        finder = alarm_controller.AlarmFinder()
+        finder = alarm.AlarmFinder()
         finder.last_time = datetime.datetime.min
         mmin, mmax = finder.compare_data()
-        self.assertEqual(50.0, mmin[channel][0])
-        self.assertEqual(51.0, mmin[channel2][0])
-        self.assertEqual(250.0, mmax[channel][0])
+        chmin = {k.channel_id: v for k, v in mmin.items()}
+        chmax = {k.channel_id: v for k, v in mmax.items()}
+        self.assertEqual(50.0, chmin[channel][0])
+        self.assertEqual(51.0, chmin[channel2][0])
+        self.assertEqual(250.0, chmax[channel][0])
         self.assertEqual(1, len(mmax))
         self.assertEqual(2, len(mmin))
 
