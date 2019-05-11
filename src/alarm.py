@@ -164,7 +164,9 @@ class AlarmFinder:
                 order_by(ReadingData.date.desc()).\
                 first()
 
-            logging.info(f"Channel {channel.channel_id} {last_mes}")
+            if last_mes is None:
+                logging.warning(f"Error checking alarm {channel}, channel not found")
+                continue
 
             res[channel] = last_mes.value_min > channel.range_min and last_mes.value_max < channel.range_max
 
