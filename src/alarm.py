@@ -39,8 +39,8 @@ class AlarmedChannelData:
 # This checks if there are any reading values out of min or max range of its own channel
 class AlarmFinder:
     def __init__(self):
-        self.file_path: Path = None
-        self.last_time: datetime.datetime = None
+        self.file_path = None  # type: Path
+        self.last_time = None  # type: datetime.datetime
 
     def load_config(self, file_path):
         self.file_path = Path(file_path)
