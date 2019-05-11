@@ -69,7 +69,7 @@ class UserAccess(db.Model):
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     site_id = db.Column(db.Integer, db.ForeignKey(Site.id, ondelete="CASCADE"), nullable=False)
-    id_cnr = db.Column(db.String(50))
+    id_cnr = db.Column(db.String(50))  # In reality this is the cnr station_id
 
     name = db.Column(db.String(50))
 
@@ -132,6 +132,8 @@ class TelegramUserContact(db.Model):
 # It's in a different database (hence the bind_key)
 # The only type difference is DOUBLE that is renamed to REAL for inter-db support
 # The original mysql page that describes REAL-DOUBLE aliases: https://dev.mysql.com/doc/refman/5.7/en/numeric-types.html
+# NOTE: the channel_id is unique in every site,
+# so to identify a CNR channel you should just need a site_id and a channel_id
 class ReadingData(db.Model):
     __bind_key__ = 'cnr'
     __tablename__ = 't_rilevamento_dati'

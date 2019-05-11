@@ -16,7 +16,7 @@ from pathlib import Path
 
 class AlarmedChannelData:
     def __init__(self, site_id, sensor_id, channel_id,
-                 cnr_site_id, cnr_sensor_id, cnr_channel_id,
+                 cnr_site_id, cnr_station_id, cnr_channel_id,
                  range_min, range_max):
 
         self.site_id = site_id
@@ -25,7 +25,7 @@ class AlarmedChannelData:
 
         # cnr id
         self.cnr_site_id = cnr_site_id
-        self.cnr_sensor_id = cnr_sensor_id
+        self.cnr_station_id = cnr_station_id
         self.cnr_channel_id = cnr_channel_id
 
         # alarm ranges
@@ -115,7 +115,7 @@ class AlarmFinder:
         channels = session.\
             query(
                 Channel.id.label("channel_id"), Channel.id_cnr.label("channel_cnr_id"), Channel.range_min, Channel.range_max,
-                Sensor.id.label("sensor_id"),  Sensor.id_cnr.label("sensor_cnr_id"),
+                Sensor.id.label("sensor_id"),  Sensor.id_cnr.label("station_cnr_id"),
                 Site.id.label("site_id"), Site.id_cnr.label("site_cnr_id")
         ).\
             filter(Sensor.id == Channel.sensor_id).\
@@ -129,7 +129,7 @@ class AlarmFinder:
                     if record[0] <= ch.range_min:
                         channel = AlarmedChannelData(
                             ch.site_id, ch.sensor_id, ch.channel_id,
-                            ch.site_cnr_id, ch.sensor_cnr_id, ch.channel_cnr_id,
+                            ch.site_cnr_id, ch.station_cnr_id, ch.channel_cnr_id,
                             ch.range_min, ch.range_max
                         )
                         alarm_min[channel] = [record[0], record.date]
@@ -140,7 +140,7 @@ class AlarmFinder:
                     if record[0] >= ch.range_max:
                         channel = AlarmedChannelData(
                             ch.site_id, ch.sensor_id, ch.channel_id,
-                            ch.site_cnr_id, ch.sensor_cnr_id, ch.channel_cnr_id,
+                            ch.site_cnr_id, ch.station_cnr_id, ch.channel_cnr_id,
                             ch.range_min, ch.range_max
                         )
                         alarm_max[channel] = [record[0], record.date]
@@ -160,7 +160,7 @@ class AlarmFinder:
 
         for channel in channel_data:
             last_mes = session.query(ReadingData.date, ReadingData.value_min, ReadingData.value_max).\
-                filter(ReadingData.site_id == channel.cnr_site_id, ReadingData.sensor_id == channel.cnr_sensor_id, ReadingData.channel_id == channel.cnr_channel_id).\
+                filter(ReadingData.site_id == channel.cnr_site_id, ReadingData.station_id == channel.cnr_station_id, ReadingData.channel_id == channel.cnr_channel_id).\
                 order_by(ReadingData.date.desc()).\
                 first()
 
