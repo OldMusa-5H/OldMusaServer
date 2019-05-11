@@ -67,7 +67,7 @@ def rest_get(clazz: Type[T], res_id: int) -> T:
     """
     resource = session.query(clazz).filter(clazz.id == res_id).first()
     if resource is None or (hasattr(resource, "site_id") and verify_site_visible(resource.site_id)):
-        raise NotFound("Cannot find %s '%s'" % (type(clazz).__name__, str(res_id)))
+        raise NotFound("Cannot find %s '%s'" % (clazz.__name__, str(res_id)))
     return resource
 
 
