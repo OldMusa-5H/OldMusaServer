@@ -303,6 +303,15 @@ channel_parser.add_argument("measure_unit", type=str)
 channel_parser.add_argument("range_min", type=int)
 channel_parser.add_argument("range_max", type=int)
 
+# Map upload
+
+map_upload_parser = RequestParser()
+
+map_upload_parser.add_argument("resize_from_w", type=int)
+map_upload_parser.add_argument("resize_from_h", type=int)
+map_upload_parser.add_argument("resize_to_w", type=int)
+map_upload_parser.add_argument("resize_to_h", type=int)
+
 
 # ---------------- Resource definitions ----------------
 # REST resource definition
@@ -549,8 +558,32 @@ class RSiteMap(Resource):
     @admin_required
     def put(self, mid):
         # TODO: check request.content_length
+        args = map_upload_parser.parse_args(strict=True)
 
+        # Resize check
+        resize_from = (args['resize_from_w'], args["resize_from_h"])
+        resize_to = (args["resize_to_w"], args["resize_to_h"])
+
+        # If one is present all the others should be present too
+        a, b, c, d = bool(resize_from[0]), bool(resize_from[1]), bool(resize_to[0]), bool(resize_to[1])
+        if (a or b or c or d) != (a and b and c and d):
+            raise BadRequest("Incomplete resize option specified!")
+
+        # Set the real image
         site_image.set_image(mid, request.get_data())
+
+        # Resize (if requested)
+        if resize_from[0]:
+            mul_x = resize_to[0] / resize_from[0]
+            mul_y = resize_to[1] / resize_from[1]
+
+            session.query(Sensor)\
+                .filter(Sensor.site_id == mid)\
+                .update({
+                    Sensor.loc_x: Sensor.loc_x * mul_x,
+                    Sensor.loc_y: Sensor.loc_y * mul_y,
+                })
+            session.commit()
 
     @admin_required
     def delete(self, mid):

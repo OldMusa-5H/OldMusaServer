@@ -419,3 +419,63 @@ class FlaskrTestCase(unittest.TestCase):
         for x in readings + readings2:
             session.delete(x)
         session.commit()
+
+    def test_image_resize(self):
+        self.login_root()
+
+        site = self.open("POST", "site", content={"name": "testsite"})["id"]
+
+        sensor1 = self.open("POST", "site/%i/sensor" % site, content={
+            "name": "sensor 01", "loc_x": "10", "loc_y": "20",
+        })["id"]
+
+        sensor2 = self.open("POST", "site/%i/sensor" % site, content={
+            "name": "sensor 01", "loc_x": "2", "loc_y": "3",
+        })["id"]
+
+        sensor3 = self.open("POST", "site/%i/sensor" % site, content={
+            "name": "sensor 01", "loc_x": "413", "loc_y": "125",
+        })["id"]
+
+        # Insert first image
+        response = app.put(self.prefix + "site/%i/map" % site, data=b"first png image", content_type="image/png",
+                           headers=self.headers)
+        self.assertEqual(200, response.status_code)
+
+        # Replace image anf resize
+        args = MultiDict([
+            ("resize_from_w", "3840"),
+            ("resize_from_h", "2160"),
+            ("resize_to_w", "7680"),
+            ("resize_to_h", "4320"),
+        ])
+
+        response = app.put(self.prefix + "site/%i/map" % site, data=b"second png image", content_type="image/png",
+                           headers=self.headers, query_string=args)
+        self.assertEqual(200, response.status_code)
+
+        res = self.open("GET", "sensor/%i" % sensor1)
+        self.assertEqual(20, res["loc_x"])
+        self.assertEqual(40, res["loc_y"])
+
+        res = self.open("GET", "sensor/%i" % sensor2)
+        self.assertEqual(4, res["loc_x"])
+        self.assertEqual(6, res["loc_y"])
+
+        res = self.open("GET", "sensor/%i" % sensor3)
+        self.assertEqual(826, res["loc_x"])
+        self.assertEqual(250, res["loc_y"])
+
+        args = [
+            ("resize_from_w", "10"),
+            # No other resize, should raise 4xx
+        ]
+
+        # Let's test some errors
+        response = app.put(self.prefix + "site/%i/map" % site, data=b"third png image", content_type="image/png",
+                           headers=self.headers, query_string=MultiDict(args))
+        self.assertEqual(400, response.status_code)
+        self.assertIn("Incomplete resize option specified", json.loads(response.data.decode())["message"])
+
+
+
