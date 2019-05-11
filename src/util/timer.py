@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 
@@ -29,7 +30,11 @@ class RepeatingTimer(object):
                 self._stop_event.wait(delta)
                 if self._stop_event.is_set():
                     return
-            self.target(*self.args, **self.kwargs)
+
+            try:
+                self.target(*self.args, **self.kwargs)
+            except:
+                logging.exception("Exception during the Timer tick")
 
     def start_async(self, *args, **kwargs):
         threading.Thread(*args, **kwargs, target=self.start).start()
