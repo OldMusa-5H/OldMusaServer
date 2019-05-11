@@ -2,7 +2,9 @@ import datetime
 import json
 import unittest
 
-from flask import Response, Flask
+from flask import Response
+from flask.testing import FlaskClient
+from werkzeug.datastructures import MultiDict
 
 import main
 import models
@@ -10,7 +12,7 @@ import alarm
 from util import date_format, parse_date
 
 main = main.Main()  # type: main.Main
-app = None  # type: Flask
+app = None  # type: FlaskClient
 root_password = ""  # type: str
 
 
@@ -184,7 +186,7 @@ class FlaskrTestCase(unittest.TestCase):
     def test_readings(self):
 
         models.db.create_all(bind="cnr")
-        session = main.db.create_session()
+        session = models.db.create_session({})()
 
         if session.query(models.ReadingData).count() > 0:
             raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
@@ -340,7 +342,7 @@ class FlaskrTestCase(unittest.TestCase):
     def test_alarm_controller(self):
         models.db.create_all(bind="cnr")
 
-        session = main.db.create_session()
+        session = models.db.create_session({})()
 
         if session.query(models.ReadingData).count() > 0:
             raise unittest.SkipTest("Cnr database not empty, are you using a real database?")
@@ -348,7 +350,7 @@ class FlaskrTestCase(unittest.TestCase):
         self.login_root()
 
         # First Site
-        site = self.open("POST", "site", content={"name": "testsite"})["id"]
+        site = self.open("POST", "site", content={"name": "testsite", "id_cnr": "1000"})["id"]
         sensor = self.open("POST", "site/%i/sensor" % site, content={"name": "testsensor", "enabled": True, "id_cnr": 1111})["id"]
 
         # Add Channel
@@ -362,20 +364,20 @@ class FlaskrTestCase(unittest.TestCase):
 
         # Add Readings
         readings = [
-            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+            models.ReadingData(site_id=1000, room_id="1", station_id=1111, sensor_id=1234, channel_id=cnr_channel,
                                value_min="150", value_max="170", date=datetime.datetime(2019, 5, 2, 8)),
-            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+            models.ReadingData(site_id=1000, room_id="1", station_id=1111, sensor_id=1234, channel_id=cnr_channel,
                                value_min="50", value_max="170", date=datetime.datetime(2019, 5, 2, 9)),
-            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+            models.ReadingData(site_id=1000, room_id="1", station_id=1111, sensor_id=1234, channel_id=cnr_channel,
                                value_min="140", value_max="180", date=datetime.datetime(2019, 5, 2, 10)),
-            models.ReadingData(site_id=site, room_id="1", station_id=sensor, sensor_id=1111, channel_id=cnr_channel,
+            models.ReadingData(site_id=1000, room_id="1", station_id=1111, sensor_id=1234, channel_id=cnr_channel,
                                value_min="150", value_max="250", date=datetime.datetime(2019, 5, 2, 11))
         ]
         session.add_all(readings)
         session.commit()
 
         # Second Site
-        site2 = self.open("POST", "site", content={"name": "testsite"})["id"]
+        site2 = self.open("POST", "site", content={"name": "testsite", "id_cnr": "1001"})["id"]
         sensor2 = self.open("POST", "site/%i/sensor" % site2, content={"name": "testsensor2", "enabled": True, "id_cnr": 2222})["id"]
 
         # Add Channel
@@ -389,13 +391,13 @@ class FlaskrTestCase(unittest.TestCase):
 
         # Add Readings
         readings2 = [
-            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+            models.ReadingData(site_id=1001, room_id="3", station_id=2222, sensor_id=1234, channel_id=cnr_channel2,
                                value_min="51", value_max="78", date=datetime.datetime(2019, 5, 2, 8)),
-            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+            models.ReadingData(site_id=1001, room_id="3", station_id=2222, sensor_id=1234, channel_id=cnr_channel2,
                                value_min="71", value_max="78", date=datetime.datetime(2019, 5, 2, 9)),
-            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+            models.ReadingData(site_id=1001, room_id="3", station_id=2222, sensor_id=1234, channel_id=cnr_channel2,
                                value_min="71", value_max="78", date=datetime.datetime(2019, 5, 2, 10)),
-            models.ReadingData(site_id=site2, room_id="3", station_id=sensor2, sensor_id=2222, channel_id=cnr_channel2,
+            models.ReadingData(site_id=1001, room_id="3", station_id=2222, sensor_id=1234, channel_id=cnr_channel2,
                                value_min="71", value_max="88", date=datetime.datetime(2019, 5, 2, 11)),
         ]
 
@@ -404,7 +406,7 @@ class FlaskrTestCase(unittest.TestCase):
 
         finder = alarm.AlarmFinder()
         finder.last_time = datetime.datetime.min
-        mmin, mmax = finder.compare_data()
+        mmin, mmax = finder.compare_data(session)
         chmin = {k.channel_id: v for k, v in mmin.items()}
         chmax = {k.channel_id: v for k, v in mmax.items()}
         self.assertEqual(50.0, chmin[channel][0])
