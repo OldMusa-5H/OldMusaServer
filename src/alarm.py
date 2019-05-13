@@ -69,6 +69,15 @@ class AlarmFinder:
         It is collected only records written after the last control and it is written this datetime values on a file.
         """
 
+        self.last_time = datetime.datetime.now()
+        time_string = str(self.last_time.year) + " " + str(self.last_time.month) + " " + str(self.last_time.day) + \
+                      " " + str(self.last_time.hour) + " " + str(self.last_time.minute) + \
+                      " " + str(self.last_time.second) + " " + str(self.last_time.microsecond)
+
+        if self.file_path is not None:
+            self.file_path.parent.mkdir(exist_ok=True)
+            self.file_path.write_text(time_string)
+
         logging.debug(f"Checking after {self.last_time}")
 
         query_min = session.query(
@@ -90,15 +99,6 @@ class AlarmFinder:
             group_by(ReadingData.room_id). \
             group_by(ReadingData.site_id). \
             filter(ReadingData.date > self.last_time).all()
-
-        self.last_time = datetime.datetime.now()
-        time_string = str(self.last_time.year) + " " + str(self.last_time.month) + " " + str(self.last_time.day) + \
-                      " " + str(self.last_time.hour) + " " + str(self.last_time.minute) + \
-                      " " + str(self.last_time.second) + " " + str(self.last_time.microsecond)
-
-        if self.file_path is not None:
-            self.file_path.parent.mkdir(exist_ok=True)
-            self.file_path.write_text(time_string)
 
         return query_min, query_max
 
