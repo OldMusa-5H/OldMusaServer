@@ -36,7 +36,7 @@ class AlarmedChannelData:
         return str(self.__dict__)
 
 
-# This checks if there are any reading values out of min or max range of its own channel
+# This class checks if there are any reading values out of min or max range of its own channel
 class AlarmFinder:
     def __init__(self):
         self.file_path = None  # type: Path
@@ -104,7 +104,8 @@ class AlarmFinder:
 
     def compare_data(self, session: Session):
         """
-        Returns two dictionaries with the value and the date of every record containing an alarming measure.
+        Returns two dictionaries with the entire record of the channel, the value and the date
+        of every record containing an alarming measure.
         It is defined as alarming value a reading value which is under its channel minimum range or over
         its channel maximum range.
         """
@@ -133,6 +134,14 @@ class AlarmFinder:
                             ch.range_min, ch.range_max
                         )
                         alarm_min[channel] = [record[0], record.date]
+
+                    elif record[0] >= ch.range_max:
+                        channel = AlarmedChannelData(
+                            ch.site_id, ch.sensor_id, ch.channel_id,
+                            ch.site_cnr_id, ch.station_cnr_id, ch.channel_cnr_id,
+                            ch.range_min, ch.range_max
+                        )
+                        alarm_max[channel] = [record[0], record.date]
 
         for record in query_max:
             for ch in channels:
