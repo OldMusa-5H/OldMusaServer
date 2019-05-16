@@ -441,7 +441,7 @@ class RUserAccessEntry(Resource):
     def delete(self, uid, sid):
         deleted = session.query(UserAccess).filter(UserAccess.user_id == uid, UserAccess.site_id == sid).delete()
         if deleted == 0:
-            raise BadRequest('Cannot find entry ' + str((uid, sid)))
+            raise NotFound('Cannot find entry ' + str((uid, sid)))
         session.commit()
         return None, 202
 
