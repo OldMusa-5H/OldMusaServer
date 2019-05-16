@@ -702,10 +702,3 @@ class RChannelData(Resource):
         else:
             raise BadRequest("Unknown precision " + precision)
 
-
-@api.resource("/sensor/<sid>/channels")
-class RSensorChannels(Resource):
-    @login_required
-    def get(self, sid):
-        # TODO: get only ids
-        return [x.id for x in rest_get(Sensor, sid).channels]
