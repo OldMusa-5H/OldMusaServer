@@ -69,7 +69,9 @@ class AlarmFinder:
         It is collected only records written after the last control and it is written this datetime values on a file.
         """
 
+        check_time = self.last_time
         self.last_time = datetime.datetime.now()
+
         time_string = str(self.last_time.year) + " " + str(self.last_time.month) + " " + str(self.last_time.day) + \
                       " " + str(self.last_time.hour) + " " + str(self.last_time.minute) + \
                       " " + str(self.last_time.second) + " " + str(self.last_time.microsecond)
@@ -78,7 +80,7 @@ class AlarmFinder:
             self.file_path.parent.mkdir(exist_ok=True)
             self.file_path.write_text(time_string)
 
-        logging.debug(f"Checking after {self.last_time}")
+        logging.debug(f"Checking after {check_time}")
 
         query_min = session.query(
             func.min(ReadingData.value_min), ReadingData.channel_id, ReadingData.station_id,
@@ -88,7 +90,7 @@ class AlarmFinder:
             group_by(ReadingData.sensor_id). \
             group_by(ReadingData.room_id). \
             group_by(ReadingData.site_id).\
-            filter(ReadingData.date > self.last_time).all()
+            filter(ReadingData.date > check_time).all()
 
         query_max = session.query(
             func.max(ReadingData.value_max), ReadingData.channel_id, ReadingData.station_id,
@@ -98,7 +100,7 @@ class AlarmFinder:
             group_by(ReadingData.sensor_id). \
             group_by(ReadingData.room_id). \
             group_by(ReadingData.site_id). \
-            filter(ReadingData.date > self.last_time).all()
+            filter(ReadingData.date > check_time).all()
 
         return query_min, query_max
 
