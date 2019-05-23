@@ -80,7 +80,7 @@ class AlarmFinder:
             self.file_path.parent.mkdir(exist_ok=True)
             self.file_path.write_text(time_string)
 
-        logging.debug(f"Checking after {check_time}")
+        logging.debug("Checking after %s", str(check_time))
 
         query_min = session.query(
             func.min(ReadingData.value_min), ReadingData.channel_id, ReadingData.station_id,
@@ -157,7 +157,7 @@ class AlarmFinder:
                         alarm_max[channel] = [record[0], record.date]
 
         if alarm_min or alarm_max:
-            logging.info(f"alarm_compare_data, found min: {alarm_min} max: {alarm_max}")
+            logging.info("alarm_compare_data, found min: %s max: %s", alarm_min, alarm_max)
 
         return alarm_min, alarm_max
 
@@ -176,7 +176,7 @@ class AlarmFinder:
                 first()
 
             if last_mes is None:
-                logging.warning(f"Error checking alarm {channel}, channel not found")
+                logging.warning("Error checking alarm %s, channel not found", channel)
                 continue
 
             res[channel] = last_mes.value_min > channel.range_min and last_mes.value_max < channel.range_max
@@ -241,11 +241,11 @@ class AlarmManager:
 
         sensor = session.query(Sensor).filter(Sensor.id == sensor_id).first()
         if sensor is None:
-            logging.warning("Unable to update sensor {}, sensor not found".format(sensor_id))
+            logging.warning("Unable to update sensor %s, sensor not found", sensor_id)
             return
 
         if len(channel_ids) > 0:
-            status = f"{channel_ids} fired"
+            status = "{} fired".format(channel_ids)
         else:
             status = "ok"
 
@@ -253,7 +253,7 @@ class AlarmManager:
         session.commit()
 
     def on_alarm_start(self, session: Session, date, channel_data: AlarmedChannelData, measure, measure_type):
-        logging.warning(f"on_alarm_started!, {date} {channel_data} {measure} {measure_type}")
+        logging.warning("on_alarm_started!, %s %s %s %s", date, channel_data, measure, measure_type)
         self.alarmed_channels[channel_data] = date
 
         if channel_data.sensor_id in self.alarmed_channels_by_sensor:
@@ -266,11 +266,11 @@ class AlarmManager:
         self.contacter.send_alarm(channel_data.channel_id, str(measure))
 
     def on_alarm_continue(self, session: Session, channel_data, measure, measure_type):
-        logging.warning(f"on_alarm_continue!, {channel_data} {measure} {measure_type}")
+        logging.warning("on_alarm_continue!, %s %s %s", channel_data, measure, measure_type)
         pass
 
     def on_alarm_end(self, session: Session, channel_data):
-        logging.warning(f"on_alarm_end!, {channel_data}")
+        logging.warning("on_alarm_end!, %s", channel_data)
 
         del self.alarmed_channels[channel_data]
 

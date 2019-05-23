@@ -39,7 +39,7 @@ class Contacter:
         return [x[0] for x in receivers.all()]
 
     def send_alarm(self, channel_id, unitvalue):
-        logging.warning(f"Sending alarm! {channel_id} {unitvalue}")
+        logging.warning("Sending alarm! %s %s", channel_id, unitvalue)
 
         channel = session.query(models.Channel).filter(models.Channel.id == channel_id).one()  # type: models.Channel
         sensor = session.query(models.Sensor).filter(models.Sensor.id == channel.sensor_id).one()  # type: models.Sensor
@@ -49,14 +49,14 @@ class Contacter:
 
         if self.fcm is not None:
             listeners = self.get_fcm_listeners(site.id)
-            logging.info(f"Sending FCM alarm to {len(listeners)} devices")
+            logging.info("Sending FCM alarm to %d devices", len(listeners))
 
             data_message = {
                 "type": "sensor_range_alarm",
                 "site_name": site.name,
                 "sensor_name": sensor.name,
                 "channel_name": channel.name,
-                "value":  f"{unitvalue} {channel.measure_unit}"
+                "value":  "{} {}".format(unitvalue, channel.measure_unit)
             }
 
             self.fcm.multiple_devices_data_message(registration_ids=listeners, data_message=data_message)
