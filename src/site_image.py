@@ -22,7 +22,7 @@ class ImageManager:
     def delete_image(self, site_id: int) -> bool:
         path = self.basedir / str(site_id)
         if path.is_file():
-            os.remove(path)
+            path.unlink()
             return True
         return False
 
