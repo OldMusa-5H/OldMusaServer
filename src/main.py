@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 from flask import Flask
-from sqlalchemy.orm import Session
 
 import util
 from alarm import AlarmManager
@@ -12,8 +11,9 @@ from models import db, User
 from rest_controller import api, site_image
 from util.db import session_scope
 from util.dependency import DependencyManager
+from util.logging import fix_add_parent_mkdir_on_log_write
 
-logging.basicConfig(level=logging.DEBUG)
+import logging.handlers
 
 CONFIG_PATHS = ["config.json", "../config.json", "~/.old_musa_server/config.json"]
 
@@ -43,6 +43,11 @@ class Main:
                 return path.resolve()
         raise Exception("Cannot find config file, are you running the program from the right path?")
 
+    def load_logging(self):
+        fix_add_parent_mkdir_on_log_write()
+
+        logging.config.dictConfig(self.config["log_settings"])
+
     def load_config(self):
         config_path = self.find_config_file()
 
@@ -51,13 +56,8 @@ class Main:
             self.config = json.load(f)
 
         # Apply config to who needs it
-        # Setup logging to file (it is in the git.ignore file so it won't be pushed)
-        # Log every sqlalchemy entry that is at least of INFO level
-        if self.config['sql_log']['enabled']:
-            logger = logging.getLogger('sqlalchemy')
-            logger.propagate = False
-            logger.addHandler(logging.FileHandler(self.config['sql_log']['output']))
-            logger.setLevel(logging.INFO)
+        self.load_logging()
+        logging.info("LOGGING TEST")
 
         site_image.set_storage_dir(self.config["map_storage_folder"])
         self.alarm_manager.load_config(
@@ -122,6 +122,7 @@ class Main:
 
         self.startup.call()
         self.startup = None
+        logging.info("Startup done! Ready to run!")
 
     def start(self, run_app=True):
         self.setup()

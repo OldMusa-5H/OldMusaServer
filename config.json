@@ -17,5 +17,52 @@
 
   "alarm_check_interval": 20.0,
 
-  "root_password": "password"
+  "root_password": "password",
+
+  "__log_settings_help": "https://docs.python.org/2/library/logging.config.html#logging-config-dictschema",
+  "log_settings": {
+    "version": 1,
+    "formatters": {
+      "brief": {
+        "format": "%(message)s"
+      },
+      "precise": {
+        "format": "%(asctime)s %(levelname)-8s %(name)-10s %(message)s",
+        "datefmt": "%Y-%m-%d %H:%M:%S"
+      }
+    },
+    "handlers": {
+      "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "brief",
+        "level": "INFO",
+        "stream": "ext://sys.stdout"
+      },
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "formatter": "precise",
+        "filename": "logs/main.log",
+        "maxBytes": 80000000,
+        "backupCount": 3
+      },
+      "sql_log": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "formatter": "precise",
+        "filename": "logs/db.log",
+        "maxBytes": 80000000,
+        "backupCount": 3
+      }
+    },
+    "loggers": {
+      "sqlalchemy": {
+        "propagate": false,
+        "level": "DEBUG",
+        "handlers": ["sql_log"]
+      }
+    },
+    "root": {
+      "level": "DEBUG",
+      "handlers": ["console", "file"]
+    }
+  }
 }
