@@ -69,7 +69,7 @@ class FlaskrTestCase(unittest.TestCase):
         return json.loads(data.decode())
 
     def login(self, username, password):
-        res = self.open("GET", "token", content={"username": username, "password": password})
+        res = self.open("POST", "token", content={"username": username, "password": password})
         self.headers["Token"] = res["token"]
 
     def login_root(self):

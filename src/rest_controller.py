@@ -269,8 +269,8 @@ id_parser.add_argument("id", type=int, required=True)
 
 # Login
 login_parser = RequestParser()
-login_parser.add_argument("username", type=str)
-login_parser.add_argument("password", type=str)
+login_parser.add_argument("username", type=str, required=True)
+login_parser.add_argument("password", type=str, required=True)
 
 # User
 user_parser = RequestParser()
@@ -324,6 +324,11 @@ map_upload_parser.add_argument("resize_to_h", type=int)
 @api.resource("/token")
 class Token(Resource):
     def get(self):
+        # Old token method, deprecated
+        # In a post request the parameters can be in the body, this might help in securing the auth parameters.
+        self.post()
+
+    def post(self):
         # Check username and password
         data = login_parser.parse_args(strict=True)
 
