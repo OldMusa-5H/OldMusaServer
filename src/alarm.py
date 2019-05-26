@@ -52,10 +52,9 @@ class AlarmFinder:
             self.last_time = datetime.datetime.min
             return
 
-        with open(self.file_path, "rt") as fp:
-            date = fp.read().split(" ")
-            self.last_time = datetime.datetime(int(date[0]), int(date[1]), int(date[2]), int(date[3]), int(date[4]),
-                                               int(date[5]), int(date[6]))
+        date = self.file_path.read_text().split(" ")
+        self.last_time = datetime.datetime(int(date[0]), int(date[1]), int(date[2]), int(date[3]), int(date[4]),
+                                           int(date[5]), int(date[6]))
 
     def ultimate_time(self, session):
         """Returns the date and hour of the last reading in the CNR database."""
