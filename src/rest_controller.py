@@ -7,6 +7,7 @@ from flask_restful import Api, Resource
 from flask_restful.reqparse import RequestParser
 from itsdangerous import SignatureExpired, BadSignature, JSONWebSignatureSerializer
 from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
@@ -437,7 +438,10 @@ class RUserAccess(Resource):
         args = id_parser.parse_args(strict=True)
 
         session.add(UserAccess(user_id=uid, site_id=args["id"]))
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError:
+            raise BadRequest("Cannot find user or site")
 
 
 @api.resource("/user/<uid>/access/<sid>")

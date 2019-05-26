@@ -477,5 +477,24 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEqual(400, response.status_code)
         self.assertIn("Incomplete resize option specified", json.loads(response.data.decode())["message"])
 
+    def test_errors(self):
+        self.login_root()
+
+        user = self.open("POST", "user", content={"username": "user11", "password": "password"})["id"]
+        site = self.open("POST", "site", content={"name": "site1", "id_cnr": "abcd"})["id"]
+
+        response = self.open("POST", "user/%i/access" % user, content={"id": "1234567890"}, raw_response=True)
+        self.assertEqual(400, response.status_code)
+        self.assertIn("Cannot find user or site", str(response.data))
+
+        response = self.open("POST", "user/%i/access" % 1234567890, content={"id": site}, raw_response=True)
+        self.assertEqual(400, response.status_code)
+        self.assertIn("Cannot find user or site", str(response.data))
+
+        self.open("POST", "user/%i/access" % user, content={"id": site})
+
+        # Cleanup
+        self.open("DELETE", "user/%i" % user)
+        self.open("DELETE", "site/%i" % site)
 
 
