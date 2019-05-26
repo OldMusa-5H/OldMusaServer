@@ -327,7 +327,7 @@ class Token(Resource):
     def get(self):
         # Old token method, deprecated
         # In a post request the parameters can be in the body, this might help in securing the auth parameters.
-        self.post()
+        return self.post()
 
     def post(self):
         # Check username and password
