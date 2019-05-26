@@ -130,7 +130,6 @@ class Main:
     def start(self, run_app=True):
         self.setup()
 
-        self.alarm_manager.start_timer_async()
         self.alarm_manager.start()
 
         if run_app:
