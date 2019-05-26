@@ -1,5 +1,6 @@
 import json
 import logging
+import logging.config
 from pathlib import Path
 
 from flask import Flask
@@ -59,9 +60,11 @@ class Main:
         self.load_logging()
         logging.info("LOGGING TEST")
 
-        site_image.set_storage_dir(self.config["map_storage_folder"])
+        vardata_path = Path(self.config["vardata_folder"])
+
+        site_image.set_storage_dir(vardata_path / "images")
         self.alarm_manager.load_config(
-            file_path=self.config["last_alarm_reading_file"],
+            vardata_path,
             check_interval=self.config["alarm_check_interval"]
         )
         self.contacter.load_config(**self.config["contacter"])
@@ -128,6 +131,7 @@ class Main:
         self.setup()
 
         self.alarm_manager.start_timer_async()
+        self.alarm_manager.start()
 
         if run_app:
             self.app.run(host="0.0.0.0", port=8080, debug=True, use_reloader=False)

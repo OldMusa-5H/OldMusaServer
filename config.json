@@ -12,8 +12,7 @@
     "telegram_api_key": ""
   },
 
-  "map_storage_folder": "./vardata/images",
-  "last_alarm_reading_file": "./vardata/last_alarm_reading.txt",
+  "vardata_folder": "./vardata",
 
   "alarm_check_interval": 20.0,
 

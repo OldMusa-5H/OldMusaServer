@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Dict
+from typing import List, Dict, IO
 
 from sqlalchemy import func, desc
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from util.timer import RepeatingTimer
 import logging
 
 from pathlib import Path
+import pickle
 
 
 class AlarmedChannelData:
@@ -42,8 +43,8 @@ class AlarmFinder:
         self.file_path = None  # type: Path
         self.last_time = None  # type: datetime.datetime
 
-    def load_config(self, file_path):
-        self.file_path = Path(file_path)
+    def load_config(self, file_path: Path):
+        self.file_path = file_path
 
         self.file_path.parent.mkdir(exist_ok=True)
 
@@ -197,12 +198,30 @@ class AlarmManager:
         self.timer = RepeatingTimer(1, self.on_timer_tick)
         self.contacter = contacter
 
+        self.alarmed_channels_save_file = None # type: Path
         self.alarmed_channels = {}  # type: Dict[AlarmedChannelData, datetime]
         self.alarmed_channels_by_sensor = {}  # type: Dict[int, List[AlarmedChannelData]]
 
-    def load_config(self, file_path, check_interval):
+    def load_config(self, vardata_path: Path, check_interval):
         self.timer.interval = check_interval
-        self.alarm_finder.load_config(file_path)
+        self.alarm_finder.load_config(vardata_path / "last_alarm_reading.txt")
+        self.alarmed_channels_save_file = vardata_path / "alarmed_channels.txt"
+        self.load_alarmed_channels()
+
+    def start(self):
+        self.timer.start_async()
+
+        # Check alarm status
+        with session_scope() as session:
+            alarmed_sensors = session.query(Sensor).filter(Sensor.status != "ok").all()
+
+            for sensor in alarmed_sensors:
+                if sensor.id not in self.alarmed_channels_by_sensor:
+                    logging.warning("Inconsistent sensor status, %i had status %s while not alarmed, cleaning up",
+                                    sensor.id, sensor.status)
+                    sensor.status = "ok"
+
+            session.commit()
 
     def on_timer_tick(self):
         # Oh, just look at the time!
@@ -254,6 +273,7 @@ class AlarmManager:
     def on_alarm_start(self, session: Session, date, channel_data: AlarmedChannelData, measure, measure_type):
         logging.warning("on_alarm_started!, %s %s %s %s", date, channel_data, measure, measure_type)
         self.alarmed_channels[channel_data] = date
+        self.save_alarmed_channels()
 
         if channel_data.sensor_id in self.alarmed_channels_by_sensor:
             self.alarmed_channels_by_sensor[channel_data.sensor_id].append(channel_data)
@@ -272,6 +292,7 @@ class AlarmManager:
         logging.warning("on_alarm_end!, %s", channel_data)
 
         del self.alarmed_channels[channel_data]
+        self.save_alarmed_channels()
 
         sensor_channels = self.alarmed_channels_by_sensor[channel_data.sensor_id]
         sensor_channels.remove(channel_data)
@@ -280,7 +301,22 @@ class AlarmManager:
 
         self.update_sensor_status(session, channel_data.sensor_id)
 
-    def start_timer_async(self):
-        self.timer.start_async()
+    def save_alarmed_channels(self):
+        with self.alarmed_channels_save_file.open("wb") as out:
+            pickle.dump(self.alarmed_channels, out, pickle.DEFAULT_PROTOCOL)
+
+    def load_alarmed_channels(self):
+        if self.alarmed_channels_save_file.is_file():
+            with self.alarmed_channels_save_file.open("rb") as inp:
+                self.alarmed_channels = pickle.load(inp)
+        else:
+            self.alarmed_channels = {}
+
+        self.alarmed_channels_by_sensor = dict.fromkeys([x.sensor_id for x in self.alarmed_channels.keys()])
+        for x in self.alarmed_channels.keys():
+            self.alarmed_channels_by_sensor[x.sensor_id].append(x)
+
+        logging.info("alarm_manager loaded %i running alarms" % len(self.alarmed_channels))
+
 
 
