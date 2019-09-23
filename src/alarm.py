@@ -312,7 +312,7 @@ class AlarmManager:
         else:
             self.alarmed_channels = {}
 
-        self.alarmed_channels_by_sensor = dict.fromkeys([x.sensor_id for x in self.alarmed_channels.keys()])
+        self.alarmed_channels_by_sensor = dict.fromkeys([x.sensor_id for x in self.alarmed_channels.keys()], [])
         for x in self.alarmed_channels.keys():
             self.alarmed_channels_by_sensor[x.sensor_id].append(x)
 
